@@ -20,6 +20,7 @@ export type Workout = {
 };
 
 export type ExerciseDefinition = { id: string; name: string; category: string };
+export type CustomCategory = { id: string; name: string; color: string };
 export type Routine = { id: string; name: string; exerciseIds: string[] };
 export type Settings = {
   restSeconds: number;
@@ -32,5 +33,6 @@ export type AppData = {
   workouts: Workout[];
   exercises: ExerciseDefinition[];
   routines: Routine[];
+  customCategories: CustomCategory[];
   settings: Settings;
 };
