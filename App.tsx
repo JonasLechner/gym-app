@@ -79,7 +79,7 @@ function WorkoutScreen({onSaved}:{onSaved:()=>void}) {
  const {data,saveWorkout,updateSettings}=useStore(); const activeLayouts=useRef(new Map<number,{y:number;height:number}>()); const [date,setDate]=useState(today()); const [entries,setEntries]=useState<ExerciseEntry[]>([]); const [picker,setPicker]=useState(false); const [copyPicker,setCopyPicker]=useState(false); const [datePicker,setDatePicker]=useState(false); const [timer,setTimer]=useState<number|null>(null); const timerRef=useRef<ReturnType<typeof setInterval>|null>(null);
  useEffect(()=>()=>{if(timerRef.current)clearInterval(timerRef.current)},[]);
  const previous=(name:string)=>{ const w=data.workouts.filter(w=>w.date<date&&w.exercises.some(e=>e.name===name)).sort((a,b)=>b.date.localeCompare(a.date))[0]; return w?.exercises.find(e=>e.name===name); };
- const pick=(e:ExerciseDefinition)=>setEntries(x=>x.some(v=>v.name===e.name)?x:[...x,{id:newId(),name:e.name,category:e.category,sets:[]}]);
+ const pick=(e:ExerciseDefinition)=>setEntries(x=>{if(x.some(v=>v.name===e.name))return x;const last=previous(e.name);return [...x,{id:newId(),name:e.name,category:e.category,sets:last?.sets.map(set=>({...set,id:newId()}))??[]}]});
  const changeSet=(ei:number,si:number,patch:Partial<SetEntry>)=>setEntries(es=>es.map((e,i)=>i===ei?{...e,sets:e.sets.map((v,j)=>j===si?{...v,...patch}:v)}:e));
  const addSet=(ei:number)=>setEntries(es=>es.map((e,i)=>{if(i!==ei)return e;const last=e.sets.at(-1)??previous(e.name)?.sets.at(-1);return {...e,sets:[...e.sets,{id:newId(),weight:last?.weight??0,reps:last?.reps??0}]};}));
  const removeSet=(ei:number,si:number)=>setEntries(es=>es.map((e,i)=>i===ei?{...e,sets:e.sets.filter((_,j)=>j!==si)}:e));
