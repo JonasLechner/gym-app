@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "LiftNotes",
+    "slug": "liftnotes",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "local.liftnotes.app"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "name": "LiftNotes",
+      "shortName": "LiftNotes",
+      "themeColor": "#0b0c0f",
+      "backgroundColor": "#0b0c0f",
+      "display": "standalone",
+      "startUrl": "/gym-app/"
+    },
+    "experiments": { "baseUrl": "/gym-app" },
+    "plugins": ["expo-document-picker"]
+  }
+}
