@@ -4,7 +4,7 @@ import Papa from 'papaparse';
 import type { AppData, ExerciseDefinition, ExerciseEntry, SetEntry, Workout } from './types';
 
 const KEY = '@liftnotes/data/v1';
-const initial: AppData = { workouts: [], exercises: [], routines: [], settings: { restSeconds: 120, timerEnabled: true } };
+const initial: AppData = { workouts: [], exercises: [], routines: [], settings: { restSeconds: 120, timerEnabled: true, backupAfterWorkout: true, nextBackupSlot: 'A' } };
 const ids = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 const translations: Record<string, string> = {
   // These FitNotes names are intentionally preserved:

@@ -21,7 +21,13 @@ export type Workout = {
 
 export type ExerciseDefinition = { id: string; name: string; category: string };
 export type Routine = { id: string; name: string; exerciseIds: string[] };
-export type Settings = { restSeconds: number; timerEnabled: boolean };
+export type Settings = {
+  restSeconds: number;
+  timerEnabled: boolean;
+  backupAfterWorkout: boolean;
+  nextBackupSlot: 'A' | 'B';
+  lastBackupAt?: string;
+};
 export type AppData = {
   workouts: Workout[];
   exercises: ExerciseDefinition[];

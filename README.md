@@ -10,7 +10,7 @@ The `main` branch is deployed to GitHub Pages automatically. After Pages is enab
 
 In Safari, tap **Share → Add to Home Screen → Add**. LiftNotes then opens from its own icon and works offline after its first successful load. No Expo Go, account, payment, or running PC is required.
 
-App data stays in Safari storage on that iPhone. Use **More → Export backup** regularly. Clearing Safari website data or deleting the home-screen app may remove local data.
+App data stays in Safari storage on that iPhone. By default, finishing a workout also exports a backup, alternating between `LiftNotes-backup-A.json` and `LiftNotes-backup-B.json`. Always save both in the same Files folder and choose **Replace** when iOS asks. This keeps the newest two backup generations outside Safari. Clearing Safari website data or deleting the home-screen app may remove its working data, which can then be restored from either backup.
 
 ## Development
 
