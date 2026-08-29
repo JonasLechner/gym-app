@@ -1,0 +1,29 @@
+import { StyleSheet } from 'react-native';
+import { C, radius } from '../../theme';
+
+export const fs=StyleSheet.create({
+  plateTarget:{height:72,flexDirection:'row',alignItems:'center',borderRadius:radius.lg,backgroundColor:C.blueDim,paddingHorizontal:18,marginBottom:7},
+  plateTargetInput:{flex:1,color:C.white,fontSize:38,fontWeight:'900',padding:0},
+  plateTargetUnit:{fontSize:14,fontWeight:'900',color:'#91c5ff'},
+  customBarRow:{minHeight:56,flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingHorizontal:12,borderRadius:radius.md,backgroundColor:C.panel,marginBottom:12},
+  customBarInput:{flexDirection:'row',alignItems:'center',gap:8},
+  plateSmallInput:{width:72,height:38,textAlign:'center',borderRadius:8,backgroundColor:C.raised,color:C.text,fontSize:16,fontWeight:'800'},
+  plateResult:{padding:15,borderRadius:radius.lg,backgroundColor:C.panel,borderWidth:StyleSheet.hairlineWidth,borderColor:C.line,marginBottom:12},
+  plateResultHead:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:12},
+  plateTotal:{fontSize:28,fontWeight:'900',color:C.white,marginTop:3},
+  platePerSide:{fontSize:13,fontWeight:'900',color:C.blue},
+  plateStack:{minHeight:66,flexDirection:'row',flexWrap:'wrap',alignItems:'center',justifyContent:'center',gap:3,paddingHorizontal:8,marginBottom:10,borderRadius:10,backgroundColor:C.raised},
+  plateVisual:{width:12,minHeight:30,alignItems:'center',justifyContent:'center',borderRadius:4,backgroundColor:C.blue},
+  plateVisualText:{fontSize:7,fontWeight:'900',color:C.white,transform:[{rotate:'-90deg'}]},
+  plateLine:{minHeight:36,flexDirection:'row',alignItems:'center',justifyContent:'space-between',borderBottomWidth:StyleSheet.hairlineWidth,borderColor:C.line},
+  plateCount:{fontSize:12,fontWeight:'800',color:C.muted},
+  plateFoot:{fontSize:11,lineHeight:17,textAlign:'center',color:C.muted,marginVertical:8},
+  sectionLabel:{fontSize:11,fontWeight:'900',letterSpacing:1.5,color:C.muted,marginTop:8,marginBottom:8,marginLeft:5},
+  setting:{minHeight:58,flexDirection:'row',alignItems:'center',justifyContent:'space-between',borderBottomWidth:StyleSheet.hairlineWidth,borderColor:C.line},
+  stepper:{flexDirection:'row',alignItems:'center',gap:18,backgroundColor:C.raised,borderRadius:9,padding:8},
+  stepValue:{color:C.text,fontWeight:'800',minWidth:42,textAlign:'center'},
+  menu:{minHeight:66,flexDirection:'row',gap:12,alignItems:'center',borderBottomWidth:StyleSheet.hairlineWidth,borderColor:C.line},
+  inline:{flexDirection:'row',alignItems:'center',gap:8,marginTop:12},
+  squareButton:{height:44,width:44,borderRadius:10,backgroundColor:C.blue,alignItems:'center',justifyContent:'center'},
+  foot:{textAlign:'center',fontSize:10,fontWeight:'800',letterSpacing:2,color:C.muted,marginTop:20}
+});

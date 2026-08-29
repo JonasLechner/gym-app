@@ -1,0 +1,34 @@
+import { StyleSheet } from 'react-native';
+import { C, radius } from '../../theme';
+
+export const fs=StyleSheet.create({
+  list:{paddingHorizontal:16,paddingBottom:20},
+  datePickerButton:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:4},
+  copyWorkout:{minHeight:64,flexDirection:'row',alignItems:'center',gap:12,paddingHorizontal:13,backgroundColor:C.panel,borderRadius:radius.md,borderWidth:StyleSheet.hairlineWidth,borderColor:C.line,marginBottom:12},
+  copyWorkoutIcon:{width:36,height:36,borderRadius:10,alignItems:'center',justifyContent:'center',backgroundColor:C.blueDim},
+  copyWorkoutTitle:{fontSize:14,fontWeight:'800',color:C.text},
+  copySummary:{padding:18,borderRadius:radius.lg,backgroundColor:C.blueDim,marginBottom:12},
+  copySet:{minHeight:44,flexDirection:'row',alignItems:'center',gap:10,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:C.line},
+  copyDayAvailable:{backgroundColor:C.blueDim},
+  draggingPanel:{zIndex:50,elevation:12,borderColor:C.blue,backgroundColor:C.raised,shadowColor:'#000',shadowOpacity:.45,shadowRadius:14,shadowOffset:{width:0,height:8}},
+  setHeader:{flexDirection:'row',alignItems:'center',gap:8,marginTop:18,marginBottom:6},
+  setLabel:{flex:1,fontSize:10,color:C.muted,fontWeight:'800',textAlign:'center'},
+  workoutSet:{paddingBottom:5,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:C.line},
+  setProjectionRow:{minHeight:32,marginLeft:40,marginRight:27,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8},
+  setProjection:{flex:1,fontSize:13,fontWeight:'900',color:C.blue},
+  weightBumps:{flexDirection:'row',gap:5},
+  weightBump:{height:28,minWidth:48,flexDirection:'row',alignItems:'center',justifyContent:'center',paddingHorizontal:6,borderRadius:8,backgroundColor:C.blueDim,borderWidth:1,borderColor:C.blue},
+  weightBumpText:{fontSize:11,fontWeight:'900',color:C.blue},
+  previous:{flex:1,minWidth:0,textAlign:'center',fontSize:12,color:C.muted},
+  timer:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',padding:12,marginBottom:12,borderRadius:radius.md,backgroundColor:C.panel,borderColor:C.blue,borderWidth:1},
+  timerText:{color:C.text,fontWeight:'900',letterSpacing:1},
+  createBox:{padding:16,borderBottomColor:C.line,borderBottomWidth:1,maxHeight:470},
+  categoryChoices:{flexDirection:'row',flexWrap:'wrap',gap:7,marginBottom:12},
+  categoryChoice:{minHeight:38,flexDirection:'row',alignItems:'center',gap:7,paddingHorizontal:10,borderRadius:10,backgroundColor:C.raised,borderWidth:1,borderColor:C.line},
+  categoryChoiceActive:{borderColor:C.blue,backgroundColor:C.blueDim},
+  categoryChoiceText:{fontSize:12,fontWeight:'700',color:C.text},
+  customCategory:{paddingTop:6,paddingBottom:8},
+  colorChoices:{flexDirection:'row',flexWrap:'wrap',gap:12,marginBottom:10},
+  colorChoice:{width:28,height:28,borderRadius:14},
+  colorChoiceActive:{borderWidth:3,borderColor:C.white}
+});

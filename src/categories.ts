@@ -17,6 +17,13 @@ export const CATEGORY_COLORS = ['#5ac8fa','#af8cff','#ffcc4d','#64d98b','#ff7582
 
 const calves = new Set(['Standing Calf Raise 1','Standing Calf Raise Machine','Leg Press Calfs','Leg Press Calfs 1','Leg Press Calfs Liegend']);
 const forearms = new Set(['Forarm Curl Dumbell Unilat','Forearm Barbell','Straightbar Cable Wristcurl']);
+const translations: Record<string,string> = {
+  // These FitNotes names are intentionally preserved:
+  // “Hip Abductor Tritte Innen” and “Hip Abductor Tritte Außen”.
+  'Beinpresse':'Leg Press','Kniebeuge':'Squat','Kreuzheben':'Deadlift',
+};
+
+export const englishExerciseName=(name:string)=>translations[name.trim()]??name.trim();
 
 export function canonicalExercise(name: string, category: string) {
   const cleanName = name.trim();
