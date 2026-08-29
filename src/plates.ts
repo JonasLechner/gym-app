@@ -6,10 +6,10 @@ export type PlateCalculation = { exact:PlateLoad|null; below:PlateLoad|null; abo
 
 const PLATE_UNITS = PLATE_SIZES.map(weight => ({ weight, units:Math.round(weight/1.25) }));
 
-function loadFromSideUnits(sideUnits: number, barWeight: number): PlateLoad {
+function loadFromSideUnits(sideUnits: number, barWeight: number, maxPlate:20|25): PlateLoad {
   let remaining=sideUnits;
   const plates:PlateCount[]=[];
-  PLATE_UNITS.forEach(({weight,units})=>{
+  PLATE_UNITS.filter(plate=>plate.weight<=maxPlate).forEach(({weight,units})=>{
     const count=Math.floor(remaining/units);
     if(count){plates.push({weight,count});remaining-=count*units}
   });
@@ -18,20 +18,20 @@ function loadFromSideUnits(sideUnits: number, barWeight: number): PlateLoad {
 }
 
 /** Calculates symmetric loading with unlimited matching plate pairs. */
-export function calculatePlateLoads(targetWeight: number, barWeight: number): PlateCalculation {
+export function calculatePlateLoads(targetWeight: number, barWeight: number, maxPlate:20|25=25): PlateCalculation {
   const target=Math.max(0,targetWeight);
   const bar=Math.max(0,barWeight);
   const rawSideUnits=(target-bar)/2.5;
   const rounded=Math.round(rawSideUnits);
   if(rawSideUnits>=0&&Math.abs(rawSideUnits-rounded)<1e-8){
-    const exact=loadFromSideUnits(rounded,bar);
+    const exact=loadFromSideUnits(rounded,bar,maxPlate);
     return {exact,below:null,above:null};
   }
   const belowUnits=Math.floor(rawSideUnits);
   const aboveUnits=Math.max(0,Math.ceil(rawSideUnits));
   return {
     exact:null,
-    below:belowUnits>=0?loadFromSideUnits(belowUnits,bar):null,
-    above:loadFromSideUnits(aboveUnits,bar),
+    below:belowUnits>=0?loadFromSideUnits(belowUnits,bar,maxPlate):null,
+    above:loadFromSideUnits(aboveUnits,bar,maxPlate),
   };
 }
