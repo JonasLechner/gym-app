@@ -28,6 +28,7 @@ export type Settings = {
   backupAfterWorkout: boolean;
   nextBackupSlot: 'A' | 'B';
   lastBackupAt?: string;
+  exerciseDefaultsVersion: number;
 };
 export type AppData = {
   workouts: Workout[];

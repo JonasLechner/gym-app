@@ -5,8 +5,18 @@ import { canonicalExercise } from './categories';
 import type { AppData, ExerciseDefinition, ExerciseEntry, SetEntry, Workout } from './types';
 
 const KEY = '@liftnotes/data/v1';
-const initial: AppData = { workouts: [], exercises: [], routines: [], customCategories: [], settings: { restSeconds: 120, timerEnabled: true, backupAfterWorkout: true, nextBackupSlot: 'A' } };
 const ids = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+const EXERCISE_DEFAULTS_VERSION = 1;
+const DEFAULT_EXERCISES: [string,string][] = [
+  ['Barbell Squat','Legs'],['Behind Back Cable Lat Raise 2 Arms','Shoulders'],['Cable Crunch','Abs'],['Cable Curl','Biceps'],['Cable Curl Unilateral','Biceps'],['Cable Face Pull','Shoulders'],['Cable Fly','Chest'],['Cable Overhead Triceps Extension','Triceps'],
+  ['Deadlift','Back'],['Dumbbell Hammer Curl','Biceps'],['Dumbbell Preacher Curl','Biceps'],['Dumbell Preacher Hammer Curl','Biceps'],['EZ-Bar Preacher Curl','Biceps'],['Flat Barbell Bench Press','Chest'],['Flat Bench Pause Reps','Chest'],['Flat Dumbbell Bench Press','Chest'],
+  ['Hanging Leg Raise','Abs'],['High Row Unilat','Back'],['Hyper Extension','Back'],['Incline Barbell Bench Press','Chest'],['Incline Dumbbell Bench Press','Chest'],['Lat Pulldown','Back'],['Lat Pulldown Close Grip','Back'],['Lat Pulldown Machine','Back'],
+  ['Lateral Dumbbell Raise','Shoulders'],['Lateral Machine Raise','Shoulders'],['Leg Curl Machine','Legs'],['Leg Extension Machine','Legs'],['Leg Press','Legs'],['Low Row','Back'],['Lying Leg Curl Machine','Legs'],['Machine Dip','Triceps'],['Machine Squat','Legs'],
+  ['Preacher Hammer Curl','Biceps'],['Pull Up','Back'],['Pullover','Back'],['Pullover Machine','Back'],['Reverse Fly Unilateral','Shoulders'],['Reverse Lat Pulldown','Back'],['Romanian Deadlift','Legs'],['Rope Push Down','Triceps'],
+  ['Seated Cable Row','Back'],['Seated Cable Row Unilateral','Back'],['Seated Dumbbell Lateral Raise','Shoulders'],['Seated Dumbbell Press','Shoulders'],['Seated Dumbell Curl','Biceps'],['Seated Hammer Curl','Biceps'],['Seated Incline Dumbbell Curl','Biceps'],
+  ['Seated Machine Curl','Biceps'],['Seated Machine Fly','Chest'],['Seated Row Machine','Back'],['Seated Shoulder Press','Shoulders'],['Seated Smith Machine Press','Shoulders'],['Standing Calf Raise Machine','Calves'],['T-Bar Row','Back'],['Triceps Kickbacks','Triceps'],['Unilateral Triceps Extension','Triceps'],
+];
+const initial: AppData = { workouts: [], exercises: DEFAULT_EXERCISES.map(([name,category])=>({id:ids(),name,category})), routines: [], customCategories: [], settings: { restSeconds: 120, timerEnabled: true, backupAfterWorkout: true, nextBackupSlot: 'A', exerciseDefaultsVersion:EXERCISE_DEFAULTS_VERSION } };
 const translations: Record<string, string> = {
   // These FitNotes names are intentionally preserved:
   // “Hip Abductor Tritte Innen” and “Hip Abductor Tritte Außen”.
@@ -30,9 +40,10 @@ const Context = createContext<Store | null>(null);
 function normalize(raw: Partial<AppData>): AppData {
   const workouts=(raw.workouts??[]).map(w=>{const merged=new Map<string,ExerciseEntry>();w.exercises.forEach(e=>{const fixed=canonicalExercise(e.name,e.category);const key=fixed.name.toLowerCase();const found=merged.get(key);if(found)found.sets.push(...e.sets);else merged.set(key,{...e,...fixed,sets:[...e.sets]})});return {...w,exercises:[...merged.values()]}});
   const definitions=new Map<string,ExerciseDefinition>();
+  if((raw.settings?.exerciseDefaultsVersion??0)<EXERCISE_DEFAULTS_VERSION)DEFAULT_EXERCISES.forEach(([name,category])=>definitions.set(name.toLowerCase(),{id:ids(),name,category}));
   (raw.exercises??[]).forEach(e=>{const fixed=canonicalExercise(e.name,e.category);definitions.set(fixed.name.toLowerCase(),{...e,...fixed})});
   workouts.forEach(w=>w.exercises.forEach(e=>{if(!definitions.has(e.name.toLowerCase()))definitions.set(e.name.toLowerCase(),{id:ids(),name:e.name,category:e.category})}));
-  return { ...initial, ...raw, workouts, exercises:[...definitions.values()].sort((a,b)=>a.name.localeCompare(b.name)), routines: raw.routines ?? [], customCategories:raw.customCategories??[], settings: { ...initial.settings, ...raw.settings } };
+  return { ...initial, ...raw, workouts, exercises:[...definitions.values()].sort((a,b)=>a.name.localeCompare(b.name)), routines: raw.routines ?? [], customCategories:raw.customCategories??[], settings: { ...initial.settings, ...raw.settings, exerciseDefaultsVersion:EXERCISE_DEFAULTS_VERSION } };
 }
 
 export function StoreProvider({ children }: React.PropsWithChildren) {
