@@ -7,7 +7,7 @@ export const fs=StyleSheet.create({
   historyFilters:{gap:7,paddingBottom:16},
   noteInput:{minHeight:76,paddingTop:12,textAlignVertical:'top'},
   editSetBlock:{paddingVertical:6,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:C.line},
-  commentInput:{height:34,marginLeft:40,marginTop:3,paddingHorizontal:9,borderRadius:7,backgroundColor:C.raised,color:C.text,fontSize:12},
+  commentInput:{height:40,marginLeft:40,marginTop:3,paddingHorizontal:9,borderRadius:7,backgroundColor:C.raised,color:C.text,fontSize:16},
   detail:{marginTop:14,borderTopColor:C.line,borderTopWidth:1,paddingTop:8},
   historyExercise:{paddingVertical:8},
   metricRow:{flexDirection:'row',gap:10,marginBottom:12},
