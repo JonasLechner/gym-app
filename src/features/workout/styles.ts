@@ -3,6 +3,7 @@ import { C, radius } from '../../theme';
 
 export const fs=StyleSheet.create({
   list:{paddingHorizontal:16,paddingBottom:20},
+  filterStrip:{flexGrow:0},
   datePickerButton:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:4},
   copyWorkout:{minHeight:64,flexDirection:'row',alignItems:'center',gap:12,paddingHorizontal:13,backgroundColor:C.panel,borderRadius:radius.md,borderWidth:StyleSheet.hairlineWidth,borderColor:C.line,marginBottom:12},
   copyWorkoutIcon:{width:36,height:36,borderRadius:10,alignItems:'center',justifyContent:'center',backgroundColor:C.blueDim},
