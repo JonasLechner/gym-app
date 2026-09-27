@@ -1,6 +1,69 @@
 import { StyleSheet } from 'react-native';
-import { C, radius } from '../../theme';
+import { C } from '../../theme';
 
 export const fs = StyleSheet.create({
   exerciseFilters: { flexGrow: 0, marginBottom: 2 },
+  exerciseRowButton: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 64,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  historyBack: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    minHeight: 44,
+    marginBottom: 14,
+  },
+  historyTitle: { fontSize: 28, lineHeight: 34, fontWeight: '800', color: C.text, marginTop: 6 },
+  historySummary: { fontSize: 14, fontWeight: '700', color: C.blue, marginTop: 8 },
+  historyHint: { fontSize: 12, lineHeight: 18, color: C.muted, marginTop: 8, marginBottom: 22 },
+  historyDayHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    paddingBottom: 12,
+  },
+  historyDate: { fontSize: 20, fontWeight: '800', color: C.text },
+  historySetCount: { fontSize: 11, fontWeight: '800', letterSpacing: 1, color: C.blue },
+  historyColumnHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: C.line,
+    paddingVertical: 10,
+  },
+  historySetNumber: { width: 36, color: C.muted, fontSize: 11, fontWeight: '800' },
+  historyWeightColumn: { flex: 1, color: C.muted, fontSize: 11, fontWeight: '800' },
+  historyOneRmColumn: {
+    width: 96,
+    textAlign: 'right',
+    color: C.muted,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  historySet: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: C.line,
+    paddingVertical: 11,
+  },
+  historySetValues: { flexDirection: 'row', alignItems: 'center' },
+  historyWeight: { flex: 1, color: C.text, fontSize: 16, fontWeight: '700' },
+  historyTimes: { color: C.muted },
+  historyOneRm: { width: 96, textAlign: 'right', color: C.blue, fontSize: 15, fontWeight: '800' },
+  historySetDetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginLeft: 36,
+    marginTop: 6,
+  },
+  historyDraft: { color: C.amber, fontSize: 10, fontWeight: '900', letterSpacing: 0.8 },
+  historyComment: { color: C.muted, fontSize: 12, lineHeight: 17, flexShrink: 1 },
 });

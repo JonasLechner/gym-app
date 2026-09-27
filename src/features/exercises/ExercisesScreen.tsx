@@ -8,12 +8,15 @@ import { fs } from './styles';
 import { C } from '../../theme';
 import { confirmAction, Empty, Header } from '../../ui';
 import { ExercisePicker } from '../workout/components';
+import type { ExerciseDefinition } from '../../types';
+import { ExerciseHistoryScreen } from './ExerciseHistoryScreen';
 
 export function ExercisesScreen() {
   const { data, deleteExercise } = useStore();
   const [query, setQuery] = useState('');
   const [picker, setPicker] = useState(false);
   const [category, setCategory] = useState('All');
+  const [selectedExercise, setSelectedExercise] = useState<ExerciseDefinition | null>(null);
   const categories = [...new Set(data.exercises.map((e) => e.category))].sort();
   const activeCategory = category === 'All' || categories.includes(category) ? category : 'All';
   const list = data.exercises.filter(
@@ -21,6 +24,12 @@ export function ExercisesScreen() {
       (activeCategory === 'All' || e.category === activeCategory) &&
       `${e.name}${e.category}`.toLowerCase().includes(query.toLowerCase()),
   );
+  if (selectedExercise) {
+    return (
+      <ExerciseHistoryScreen exercise={selectedExercise} onBack={() => setSelectedExercise(null)} />
+    );
+  }
+
   return (
     <View style={s.flex}>
       <View style={[s.content, s.flex]}>
@@ -88,19 +97,30 @@ export function ExercisesScreen() {
           }
           renderItem={({ item }) => (
             <View style={s.row}>
-              <View
-                style={[
-                  s.exerciseIcon,
-                  { backgroundColor: colorForCategory(item.category, data.customCategories) },
-                ]}
-              >
-                <Ionicons name="barbell" size={18} color={C.white} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.rowTitle}>{item.name}</Text>
-                <Text style={s.rowSub}>{item.category}</Text>
-              </View>
               <Pressable
+                onPress={() => setSelectedExercise(item)}
+                accessibilityRole="button"
+                accessibilityLabel={`View history for ${item.name}`}
+                style={fs.exerciseRowButton}
+              >
+                <View
+                  style={[
+                    s.exerciseIcon,
+                    { backgroundColor: colorForCategory(item.category, data.customCategories) },
+                  ]}
+                >
+                  <Ionicons name="barbell" size={18} color={C.white} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.rowTitle}>{item.name}</Text>
+                  <Text style={s.rowSub}>{item.category}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={C.muted} />
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Delete ${item.name}`}
+                hitSlop={8}
                 onPress={() =>
                   confirmAction('Delete exercise?', item.name, () => deleteExercise(item.id))
                 }
