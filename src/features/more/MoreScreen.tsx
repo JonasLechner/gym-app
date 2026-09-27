@@ -1,7 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import React, { useState } from 'react';
-import { Alert, Modal, Pressable, SafeAreaView, ScrollView, Switch, Text, TextInput, View } from 'react-native';
+import {
+  Alert,
+  Modal,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  Switch,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { exportBackup } from '../../backup';
 import { calculatePlateLoads, type PlateLoad } from '../../plates';
 import { newId, useStore } from '../../store';
@@ -11,12 +21,327 @@ import { C } from '../../theme';
 import type { Routine } from '../../types';
 import { fmt, Header, WeightInput } from '../../ui';
 
-function PlateLoadCard({title,load}:{title:string;load:PlateLoad}){return <View style={fs.plateResult}><View style={fs.plateResultHead}><View><Text style={s.overline}>{title}</Text><Text style={fs.plateTotal}>{fmt(load.total)} kg</Text></View><Text style={fs.platePerSide}>{fmt(load.perSide)} kg / side</Text></View>{load.plates.length?<><View style={fs.plateStack}>{load.plates.flatMap(({weight,count})=>Array.from({length:count},(_,index)=><View key={`${weight}-${index}`} style={[fs.plateVisual,{height:28+Math.min(weight,25)}]}><Text style={fs.plateVisualText}>{fmt(weight)}</Text></View>))}</View>{load.plates.map(({weight,count})=><View key={weight} style={fs.plateLine}><Text style={s.rowTitle}>{fmt(weight)} kg plate</Text><Text style={fs.plateCount}>× {count} each side</Text></View>)}</>:<Text style={s.helper}>Empty bar — no plates required.</Text>}</View>}
-function PlateCalculatorModal({visible,onClose}:{visible:boolean;onClose:()=>void}){const [target,setTarget]=useState(100);const [barChoice,setBarChoice]=useState<'20'|'10'|'0'|'custom'>('20');const [customBar,setCustomBar]=useState(15);const [maxPlate,setMaxPlate]=useState<20|25>(20);const barWeight=barChoice==='custom'?customBar:Number(barChoice);const result=calculatePlateLoads(target,barWeight,maxPlate);return <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}><SafeAreaView style={s.screen}><View style={s.modalHead}><View style={{width:42}}/><Text style={s.modalTitle}>Plate calculator</Text><Pressable onPress={onClose}><Text style={s.link}>Done</Text></Pressable></View><ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled"><Text style={s.label}>TARGET TOTAL WEIGHT</Text><View style={fs.plateTarget}><WeightInput value={target} onChange={setTarget} style={fs.plateTargetInput}/><Text style={fs.plateTargetUnit}>KG</Text></View><Text style={s.helper}>Total weight includes the bar. Collars are ignored.</Text><Text style={s.label}>BAR WEIGHT</Text><View style={s.segmented}>{(['20','10','0','custom'] as const).map(choice=><Pressable key={choice} onPress={()=>setBarChoice(choice)} style={[s.segment,barChoice===choice&&s.segmentActive]}><Text style={[s.segmentText,barChoice===choice&&s.segmentTextActive]}>{choice==='custom'?'Custom':`${choice} kg`}</Text></Pressable>)}</View>{barChoice==='custom'&&<View style={fs.customBarRow}><Text style={s.rowTitle}>Custom bar</Text><View style={fs.customBarInput}><WeightInput value={customBar} onChange={setCustomBar} style={fs.plateSmallInput}/><Text style={s.unitLabel}>KG</Text></View></View>}<Text style={s.label}>LARGEST AVAILABLE PLATE</Text><View style={s.segmented}>{([25,20] as const).map(weight=><Pressable key={weight} onPress={()=>setMaxPlate(weight)} style={[s.segment,maxPlate===weight&&s.segmentActive]}><Text style={[s.segmentText,maxPlate===weight&&s.segmentTextActive]}>{weight} kg</Text></Pressable>)}</View><Text style={fs.sectionLabel}>PLATES ON EACH SIDE</Text>{result.exact?<PlateLoadCard title="EXACT LOAD" load={result.exact}/>:<>{result.below&&<PlateLoadCard title="NEAREST BELOW" load={result.below}/>}{result.above&&<PlateLoadCard title="NEAREST ABOVE" load={result.above}/>}</>}<Text style={fs.plateFoot}>Available plates: {maxPlate===25?'25 · ':''}20 · 15 · 10 · 5 · 2.5 · 1.25 kg</Text></ScrollView></SafeAreaView></Modal>}
-export function MoreScreen(){const {data,importCsv,replaceData,updateSettings,setRoutines}=useStore();const [routineName,setRoutineName]=useState('');const [plateCalculator,setPlateCalculator]=useState(false);
- const importFile=async()=>{try{const result=await DocumentPicker.getDocumentAsync({type:['text/csv','text/comma-separated-values'],copyToCacheDirectory:true});if(result.canceled)return;const text=await (await fetch(result.assets[0]!.uri)).text();const summary=importCsv(text);setTimeout(()=>Alert.alert('Import complete',`${summary.workouts} workouts and ${summary.sets} sets added.\n${summary.duplicates} duplicate sets skipped.`),100);}catch(e){Alert.alert('Import failed',e instanceof Error?e.message:'Could not read file.')}};
- const backup=async()=>{try{await exportBackup(data);}catch(e){Alert.alert('Export failed',String(e))}};
- const restore=async()=>{try{const r=await DocumentPicker.getDocumentAsync({type:'application/json',copyToCacheDirectory:true});if(r.canceled)return;const next=JSON.parse(await(await fetch(r.assets[0]!.uri)).text());Alert.alert('Restore backup?','Current data will be replaced.',[{text:'Cancel'},{text:'Restore',onPress:()=>replaceData(next)}]);}catch{Alert.alert('Invalid backup','The selected file could not be restored.')}};
- const addRoutine=()=>{if(!routineName.trim())return;const r:Routine={id:newId(),name:routineName.trim(),exerciseIds:[]};setRoutines([...data.routines,r]);setRoutineName('')};
- return <><ScrollView contentContainerStyle={s.content}><Header title="More"/><Text style={fs.sectionLabel}>TIMER</Text><View style={s.card}><View style={fs.setting}><View><Text style={s.rowTitle}>Rest timer</Text><Text style={s.rowSub}>Starts when a set is added</Text></View><Switch value={data.settings.timerEnabled} onValueChange={v=>updateSettings({timerEnabled:v})} trackColor={{true:C.blue}}/></View><View style={fs.setting}><Text style={s.rowTitle}>Duration</Text><View style={fs.stepper}><Pressable onPress={()=>updateSettings({restSeconds:Math.max(15,data.settings.restSeconds-15)})}><Ionicons name="remove" size={20} color={C.blue}/></Pressable><Text style={fs.stepValue}>{data.settings.restSeconds}s</Text><Pressable onPress={()=>updateSettings({restSeconds:data.settings.restSeconds+15})}><Ionicons name="add" size={20} color={C.blue}/></Pressable></View></View></View><Text style={fs.sectionLabel}>ROUTINES</Text><View style={s.card}>{data.routines.map(r=><View style={fs.setting} key={r.id}><Text style={s.rowTitle}>{r.name}</Text><Pressable onPress={()=>setRoutines(data.routines.filter(x=>x.id!==r.id))}><Ionicons name="trash-outline" size={19} color={C.red}/></Pressable></View>)}<View style={fs.inline}><TextInput value={routineName} onChangeText={setRoutineName} placeholder="Routine name" placeholderTextColor={C.muted} style={[s.input,{flex:1,marginBottom:0}]}/><Pressable onPress={addRoutine} style={fs.squareButton}><Ionicons name="add" size={22} color={C.white}/></Pressable></View><Text style={s.helper}>Routine exercise selection will be expanded after the core workout flow.</Text></View><Text style={fs.sectionLabel}>BACKUP</Text><View style={s.card}><View style={fs.setting}><View style={{flex:1,paddingRight:12}}><Text style={s.rowTitle}>Backup after each workout</Text><Text style={s.rowSub}>Alternates between backup A and B, preserving the latest two copies</Text></View><Switch value={data.settings.backupAfterWorkout} onValueChange={v=>updateSettings({backupAfterWorkout:v})} trackColor={{true:C.blue}}/></View>{data.settings.lastBackupAt&&<Text style={[s.helper,{marginTop:10}]}>Last backup started: {new Date(data.settings.lastBackupAt).toLocaleString()}</Text>}</View><Text style={fs.sectionLabel}>DATA</Text><View style={s.card}><Menu icon="document-text-outline" title="Import FitNotes CSV" sub="Duplicates are skipped" onPress={importFile}/><Menu icon="share-outline" title="Export backup" sub="Save all local data as JSON" onPress={backup}/><Menu icon="download-outline" title="Restore backup" sub="Replace data from JSON" onPress={restore}/></View><Text style={fs.sectionLabel}>TOOLS</Text><View style={s.card}><Menu icon="calculator-outline" title="Plate calculator" sub="Build an evenly loaded bar" onPress={()=>setPlateCalculator(true)}/><Menu icon="trophy-outline" title="Personal records" sub="Available under Progress" onPress={()=>{}}/></View><Text style={fs.foot}>PRIVATE · OFFLINE · NO ACCOUNT</Text></ScrollView><PlateCalculatorModal visible={plateCalculator} onClose={()=>setPlateCalculator(false)}/></>}
-function Menu({icon,title,sub,onPress}:{icon:keyof typeof Ionicons.glyphMap;title:string;sub:string;onPress:()=>void}){return <Pressable onPress={onPress} style={fs.menu}><View style={s.exerciseIcon}><Ionicons name={icon} size={19} color={C.blue}/></View><View style={{flex:1}}><Text style={s.rowTitle}>{title}</Text><Text style={s.rowSub}>{sub}</Text></View><Ionicons name="chevron-forward" size={18} color={C.muted}/></Pressable>}
+function PlateLoadCard({ title, load }: { title: string; load: PlateLoad }) {
+  return (
+    <View style={fs.plateResult}>
+      <View style={fs.plateResultHead}>
+        <View>
+          <Text style={s.overline}>{title}</Text>
+          <Text style={fs.plateTotal}>{fmt(load.total)} kg</Text>
+        </View>
+        <Text style={fs.platePerSide}>{fmt(load.perSide)} kg / side</Text>
+      </View>
+      {load.plates.length ? (
+        <>
+          <View style={fs.plateStack}>
+            {load.plates.flatMap(({ weight, count }) =>
+              Array.from({ length: count }, (_, index) => (
+                <View
+                  key={`${weight}-${index}`}
+                  style={[fs.plateVisual, { height: 28 + Math.min(weight, 25) }]}
+                >
+                  <Text style={fs.plateVisualText}>{fmt(weight)}</Text>
+                </View>
+              )),
+            )}
+          </View>
+          {load.plates.map(({ weight, count }) => (
+            <View key={weight} style={fs.plateLine}>
+              <Text style={s.rowTitle}>{fmt(weight)} kg plate</Text>
+              <Text style={fs.plateCount}>× {count} each side</Text>
+            </View>
+          ))}
+        </>
+      ) : (
+        <Text style={s.helper}>Empty bar — no plates required.</Text>
+      )}
+    </View>
+  );
+}
+function PlateCalculatorModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const [target, setTarget] = useState(100);
+  const [barChoice, setBarChoice] = useState<'20' | '10' | '0' | 'custom'>('20');
+  const [customBar, setCustomBar] = useState(15);
+  const [maxPlate, setMaxPlate] = useState<20 | 25>(20);
+  const barWeight = barChoice === 'custom' ? customBar : Number(barChoice);
+  const result = calculatePlateLoads(target, barWeight, maxPlate);
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+    >
+      <SafeAreaView style={s.screen}>
+        <View style={s.modalHead}>
+          <View style={{ width: 42 }} />
+          <Text style={s.modalTitle}>Plate calculator</Text>
+          <Pressable onPress={onClose}>
+            <Text style={s.link}>Done</Text>
+          </Pressable>
+        </View>
+        <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+          <Text style={s.label}>TARGET TOTAL WEIGHT</Text>
+          <View style={fs.plateTarget}>
+            <WeightInput value={target} onChange={setTarget} style={fs.plateTargetInput} />
+            <Text style={fs.plateTargetUnit}>KG</Text>
+          </View>
+          <Text style={s.helper}>Total weight includes the bar. Collars are ignored.</Text>
+          <Text style={s.label}>BAR WEIGHT</Text>
+          <View style={s.segmented}>
+            {(['20', '10', '0', 'custom'] as const).map((choice) => (
+              <Pressable
+                key={choice}
+                onPress={() => setBarChoice(choice)}
+                style={[s.segment, barChoice === choice && s.segmentActive]}
+              >
+                <Text style={[s.segmentText, barChoice === choice && s.segmentTextActive]}>
+                  {choice === 'custom' ? 'Custom' : `${choice} kg`}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          {barChoice === 'custom' && (
+            <View style={fs.customBarRow}>
+              <Text style={s.rowTitle}>Custom bar</Text>
+              <View style={fs.customBarInput}>
+                <WeightInput value={customBar} onChange={setCustomBar} style={fs.plateSmallInput} />
+                <Text style={s.unitLabel}>KG</Text>
+              </View>
+            </View>
+          )}
+          <Text style={s.label}>LARGEST AVAILABLE PLATE</Text>
+          <View style={s.segmented}>
+            {([25, 20] as const).map((weight) => (
+              <Pressable
+                key={weight}
+                onPress={() => setMaxPlate(weight)}
+                style={[s.segment, maxPlate === weight && s.segmentActive]}
+              >
+                <Text style={[s.segmentText, maxPlate === weight && s.segmentTextActive]}>
+                  {weight} kg
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          <Text style={fs.sectionLabel}>PLATES ON EACH SIDE</Text>
+          {result.exact ? (
+            <PlateLoadCard title="EXACT LOAD" load={result.exact} />
+          ) : (
+            <>
+              {result.below && <PlateLoadCard title="NEAREST BELOW" load={result.below} />}
+              {result.above && <PlateLoadCard title="NEAREST ABOVE" load={result.above} />}
+            </>
+          )}
+          <Text style={fs.plateFoot}>
+            Available plates: {maxPlate === 25 ? '25 · ' : ''}20 · 15 · 10 · 5 · 2.5 · 1.25 kg
+          </Text>
+        </ScrollView>
+      </SafeAreaView>
+    </Modal>
+  );
+}
+export function MoreScreen() {
+  const { data, importCsv, replaceData, updateSettings, setRoutines } = useStore();
+  const [routineName, setRoutineName] = useState('');
+  const [plateCalculator, setPlateCalculator] = useState(false);
+  const importFile = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['text/csv', 'text/comma-separated-values'],
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled) return;
+      const text = await (await fetch(result.assets[0]!.uri)).text();
+      const summary = importCsv(text);
+      setTimeout(
+        () =>
+          Alert.alert(
+            'Import complete',
+            `${summary.workouts} workouts and ${summary.sets} sets added.\n` +
+              `${summary.duplicates} duplicate sets skipped.`,
+          ),
+        100,
+      );
+    } catch (e) {
+      Alert.alert('Import failed', e instanceof Error ? e.message : 'Could not read file.');
+    }
+  };
+  const backup = async () => {
+    try {
+      await exportBackup(data);
+    } catch (e) {
+      Alert.alert('Export failed', String(e));
+    }
+  };
+  const restore = async () => {
+    try {
+      const r = await DocumentPicker.getDocumentAsync({
+        type: 'application/json',
+        copyToCacheDirectory: true,
+      });
+      if (r.canceled) return;
+      const next = JSON.parse(await (await fetch(r.assets[0]!.uri)).text());
+      Alert.alert('Restore backup?', 'Current data will be replaced.', [
+        { text: 'Cancel' },
+        { text: 'Restore', onPress: () => replaceData(next) },
+      ]);
+    } catch {
+      Alert.alert('Invalid backup', 'The selected file could not be restored.');
+    }
+  };
+  const addRoutine = () => {
+    if (!routineName.trim()) return;
+    const r: Routine = { id: newId(), name: routineName.trim(), exerciseIds: [] };
+    setRoutines([...data.routines, r]);
+    setRoutineName('');
+  };
+  return (
+    <>
+      <ScrollView contentContainerStyle={s.content}>
+        <Header title="More" />
+        <Text style={fs.sectionLabel}>TIMER</Text>
+        <View style={s.card}>
+          <View style={fs.setting}>
+            <View>
+              <Text style={s.rowTitle}>Rest timer</Text>
+              <Text style={s.rowSub}>Starts when a set is added</Text>
+            </View>
+            <Switch
+              value={data.settings.timerEnabled}
+              onValueChange={(v) => updateSettings({ timerEnabled: v })}
+              trackColor={{ true: C.blue }}
+            />
+          </View>
+          <View style={fs.setting}>
+            <Text style={s.rowTitle}>Duration</Text>
+            <View style={fs.stepper}>
+              <Pressable
+                onPress={() =>
+                  updateSettings({ restSeconds: Math.max(15, data.settings.restSeconds - 15) })
+                }
+              >
+                <Ionicons name="remove" size={20} color={C.blue} />
+              </Pressable>
+              <Text style={fs.stepValue}>{data.settings.restSeconds}s</Text>
+              <Pressable
+                onPress={() => updateSettings({ restSeconds: data.settings.restSeconds + 15 })}
+              >
+                <Ionicons name="add" size={20} color={C.blue} />
+              </Pressable>
+            </View>
+          </View>
+        </View>
+        <Text style={fs.sectionLabel}>ROUTINES</Text>
+        <View style={s.card}>
+          {data.routines.map((r) => (
+            <View style={fs.setting} key={r.id}>
+              <Text style={s.rowTitle}>{r.name}</Text>
+              <Pressable onPress={() => setRoutines(data.routines.filter((x) => x.id !== r.id))}>
+                <Ionicons name="trash-outline" size={19} color={C.red} />
+              </Pressable>
+            </View>
+          ))}
+          <View style={fs.inline}>
+            <TextInput
+              value={routineName}
+              onChangeText={setRoutineName}
+              placeholder="Routine name"
+              placeholderTextColor={C.muted}
+              style={[s.input, { flex: 1, marginBottom: 0 }]}
+            />
+            <Pressable onPress={addRoutine} style={fs.squareButton}>
+              <Ionicons name="add" size={22} color={C.white} />
+            </Pressable>
+          </View>
+          <Text style={s.helper}>
+            Routine exercise selection will be expanded after the core workout flow.
+          </Text>
+        </View>
+        <Text style={fs.sectionLabel}>BACKUP</Text>
+        <View style={s.card}>
+          <View style={fs.setting}>
+            <View style={{ flex: 1, paddingRight: 12 }}>
+              <Text style={s.rowTitle}>Backup after each workout</Text>
+              <Text style={s.rowSub}>
+                Alternates between backup A and B, preserving the latest two copies
+              </Text>
+            </View>
+            <Switch
+              value={data.settings.backupAfterWorkout}
+              onValueChange={(v) => updateSettings({ backupAfterWorkout: v })}
+              trackColor={{ true: C.blue }}
+            />
+          </View>
+          {data.settings.lastBackupAt && (
+            <Text style={[s.helper, { marginTop: 10 }]}>
+              Last backup started: {new Date(data.settings.lastBackupAt).toLocaleString()}
+            </Text>
+          )}
+        </View>
+        <Text style={fs.sectionLabel}>DATA</Text>
+        <View style={s.card}>
+          <Menu
+            icon="document-text-outline"
+            title="Import FitNotes CSV"
+            sub="Duplicates are skipped"
+            onPress={importFile}
+          />
+          <Menu
+            icon="share-outline"
+            title="Export backup"
+            sub="Save all local data as JSON"
+            onPress={backup}
+          />
+          <Menu
+            icon="download-outline"
+            title="Restore backup"
+            sub="Replace data from JSON"
+            onPress={restore}
+          />
+        </View>
+        <Text style={fs.sectionLabel}>TOOLS</Text>
+        <View style={s.card}>
+          <Menu
+            icon="calculator-outline"
+            title="Plate calculator"
+            sub="Build an evenly loaded bar"
+            onPress={() => setPlateCalculator(true)}
+          />
+          <Menu
+            icon="trophy-outline"
+            title="Personal records"
+            sub="Available under Progress"
+            onPress={() => {}}
+          />
+        </View>
+        <Text style={fs.foot}>PRIVATE · OFFLINE · NO ACCOUNT</Text>
+      </ScrollView>
+      <PlateCalculatorModal visible={plateCalculator} onClose={() => setPlateCalculator(false)} />
+    </>
+  );
+}
+function Menu({
+  icon,
+  title,
+  sub,
+  onPress,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  sub: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable onPress={onPress} style={fs.menu}>
+      <View style={s.exerciseIcon}>
+        <Ionicons name={icon} size={19} color={C.blue} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={s.rowTitle}>{title}</Text>
+        <Text style={s.rowSub}>{sub}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={C.muted} />
+    </Pressable>
+  );
+}

@@ -8,7 +8,9 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build:web": "expo export --platform web && node scripts/patch-web.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
@@ -34,6 +36,7 @@
   "devDependencies": {
     "@types/papaparse": "^5.3.16",
     "@types/react": "~19.1.10",
+    "prettier": "3.6.2",
     "typescript": "~5.9.2"
   },
   "private": true

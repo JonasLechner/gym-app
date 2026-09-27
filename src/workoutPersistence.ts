@@ -13,32 +13,37 @@ export type WorkoutSaveResult = {
  * this boundary owns workout persistence and rotating-backup coordination.
  */
 export function useWorkoutPersistence() {
-  const {data,saveWorkout,updateSettings}=useStore();
+  const { data, saveWorkout, updateSettings } = useStore();
 
-  return useCallback(async(workout:Workout,webSnapshot?:AppData):Promise<WorkoutSaveResult>=>{
-    saveWorkout(workout,webSnapshot);
-    const current=webSnapshot??data;
-    if(!current.settings.backupAfterWorkout)return {};
+  return useCallback(
+    async (workout: Workout, webSnapshot?: AppData): Promise<WorkoutSaveResult> => {
+      saveWorkout(workout, webSnapshot);
+      const current = webSnapshot ?? data;
+      if (!current.settings.backupAfterWorkout) return {};
 
-    const backupSlot=current.settings.nextBackupSlot;
-    const backedUpAt=new Date().toISOString();
-    const settings={
-      ...current.settings,
-      nextBackupSlot:backupSlot==='A'?'B' as const:'A' as const,
-      lastBackupAt:backedUpAt,
-    };
-    const backupData={
-      ...current,
-      workouts:[...current.workouts.filter(saved=>saved.id!==workout.id),workout].sort((a,b)=>b.date.localeCompare(a.date)),
-      settings,
-    };
+      const backupSlot = current.settings.nextBackupSlot;
+      const backedUpAt = new Date().toISOString();
+      const settings = {
+        ...current.settings,
+        nextBackupSlot: backupSlot === 'A' ? ('B' as const) : ('A' as const),
+        lastBackupAt: backedUpAt,
+      };
+      const backupData = {
+        ...current,
+        workouts: [...current.workouts.filter((saved) => saved.id !== workout.id), workout].sort(
+          (a, b) => b.date.localeCompare(a.date),
+        ),
+        settings,
+      };
 
-    try{
-      await exportBackup(backupData,backupSlot);
-      updateSettings(settings);
-      return {backupSlot};
-    }catch(backupError){
-      return {backupSlot,backupError};
-    }
-  },[data,saveWorkout,updateSettings]);
+      try {
+        await exportBackup(backupData, backupSlot);
+        updateSettings(settings);
+        return { backupSlot };
+      } catch (backupError) {
+        return { backupSlot, backupError };
+      }
+    },
+    [data, saveWorkout, updateSettings],
+  );
 }

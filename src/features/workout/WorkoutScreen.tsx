@@ -1,6 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, AppState, Modal, Platform, Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from 'react-native';
+import {
+  Alert,
+  AppState,
+  Modal,
+  Platform,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { colorForCategory } from '../../categories';
 import { projectedOneRepMax } from '../../progress';
 import { newId, persistWorkoutOnWeb, prettyDate, today, useStore } from '../../store';
@@ -11,92 +22,863 @@ import type { ExerciseDefinition, ExerciseEntry, SetEntry, Workout } from '../..
 import { Button, confirmAction, Empty, fmt, Header, WeightInput } from '../../ui';
 import { useWorkoutPersistence } from '../../workoutPersistence';
 import { DatePickerModal, DraggablePanel, ExercisePicker } from './components';
-import { completedCopySources, previousCompletedWorkout, removesLastSetFromCompletedWorkout } from './workoutEdits';
+import {
+  completedCopySources,
+  previousCompletedWorkout,
+  removesLastSetFromCompletedWorkout,
+} from './workoutEdits';
 
-function CopyWorkoutModal({visible,targetDate,onClose,onCopy}:{visible:boolean;targetDate:string;onClose:()=>void;onCopy:(entries:ExerciseEntry[])=>void}) {
- const {data}=useStore();const previewLayouts=useRef(new Map<number,{y:number;height:number}>());const eligible=completedCopySources(data.workouts,targetDate);const latest=eligible[0]?.date??targetDate;const [month,setMonth]=useState(latest.slice(0,7));const [selectedDay,setSelectedDay]=useState<string|null>(null);const [source,setSource]=useState<Workout|null>(null);const [preview,setPreview]=useState<ExerciseEntry[]>([]);const [addingExercise,setAddingExercise]=useState(false);
- useEffect(()=>{if(visible){const next=eligible[0];setMonth((next?.date??targetDate).slice(0,7));setSelectedDay(null);setSource(null);setPreview([]);setAddingExercise(false)}},[visible,targetDate]);
- const [year,monthNumber]=month.split('-').map(Number);const first=new Date(year!,monthNumber!-1,1);const leading=(first.getDay()+6)%7;const count=new Date(year!,monthNumber!,0).getDate();const cells=Array.from({length:Math.ceil((leading+count)/7)*7},(_,i)=>{const day=i-leading+1;return day>0&&day<=count?day:null});const byDate=new Map<string,Workout[]>();eligible.forEach(w=>byDate.set(w.date,[...(byDate.get(w.date)??[]),w]));
- const choose=(w:Workout)=>{
-  setSource(w);
-  setPreview(w.exercises.map(e=>({
-   ...e,
-   id:newId(),
-   sets:e.sets.map(set=>({...set,id:newId(),comment:undefined})),
-  })));
- };
- const selectDate=(date:string)=>{const found=byDate.get(date)??[];setSelectedDay(date);if(found.length===1)choose(found[0]!)};
- const move=(delta:number)=>{const next=new Date(year!,monthNumber!-1+delta,1);setMonth(`${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}`)};
- const addSet=(ei:number)=>setPreview(es=>es.map((e,i)=>i===ei?{...e,sets:[...e.sets,{...(e.sets.at(-1)??{weight:0,reps:0}),id:newId(),comment:undefined}]}:e));
- const movePreview=(from:number,dragY:number)=>{if(Math.abs(dragY)<12)return;setPreview(items=>{const origin=previewLayouts.current.get(from);if(!origin)return items;const draggedCenter=origin.y+origin.height/2+dragY;let to=from;let nearest=Infinity;previewLayouts.current.forEach((layout,index)=>{const distance=Math.abs(layout.y+layout.height/2-draggedCenter);if(distance<nearest){nearest=distance;to=index}});if(to===from)return items;const next=[...items];const [moved]=next.splice(from,1);next.splice(to,0,moved!);return next})};
- const workoutsForDay=selectedDay?byDate.get(selectedDay)??[]:[];
- const title=addingExercise?'Add exercise':source?'Review copied workout':workoutsForDay.length>1?'Choose workout':'Copy past workout';
- return <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}><SafeAreaView style={s.screen}><View style={s.modalHead}><Pressable onPress={source||addingExercise?()=>{if(addingExercise)setAddingExercise(false);else{setSource(null);setPreview([])}}:onClose}><Text style={s.link}>{source||addingExercise?'Back':'Cancel'}</Text></Pressable><Text style={s.modalTitle}>{title}</Text><View style={{width:42}}/></View>{addingExercise?<ScrollView style={s.flex} keyboardShouldPersistTaps="handled" contentContainerStyle={fs.list}>{data.exercises.filter(e=>!preview.some(p=>p.name===e.name)).map(item=><Pressable key={item.id} style={s.row} onPress={()=>{setPreview(p=>[...p,{id:newId(),name:item.name,category:item.category,sets:[]}]);setAddingExercise(false)}}><View style={[s.exerciseIcon,{backgroundColor:colorForCategory(item.category,data.customCategories)}]}><Ionicons name="barbell" size={18} color={C.white}/></View><View style={{flex:1}}><Text style={s.rowTitle}>{item.name}</Text><Text style={s.rowSub}>{item.category}</Text></View><Ionicons name="add" size={20} color={C.blue}/></Pressable>)}</ScrollView>:source?<ScrollView contentContainerStyle={s.content}><View style={fs.copySummary}><Text style={s.overline}>SOURCE WORKOUT</Text><Text style={s.bigDate}>{prettyDate(source.date)}</Text><Text style={s.rowSub}>{preview.length} exercises · {preview.reduce((a,e)=>a+e.sets.length,0)} sets</Text></View>{preview.map((e,ei)=><DraggablePanel key={e.id} index={ei} onMove={movePreview} onLayout={event=>previewLayouts.current.set(ei,{y:event.nativeEvent.layout.y,height:event.nativeEvent.layout.height})}>{handle=><><View style={s.cardHead}>{handle}<View style={{flex:1}}><Text style={s.cardTitle}>{e.name}</Text><Text style={s.rowSub}>{e.category}</Text></View><Pressable onPress={()=>setPreview(p=>p.filter((_,i)=>i!==ei))}><Ionicons name="trash-outline" size={20} color={C.red}/></Pressable></View>{e.sets.map((set,si)=><View style={fs.copySet} key={set.id}><Text style={s.setNo}>{si+1}</Text><Text style={[s.rowTitle,{flex:1}]}>{fmt(set.weight)} kg × {set.reps}</Text><Pressable onPress={()=>setPreview(p=>p.map((x,i)=>i===ei?{...x,sets:x.sets.filter((_,j)=>j!==si)}:x))}><Ionicons name="trash-outline" size={18} color={C.muted}/></Pressable></View>)}<Pressable style={s.addSet} onPress={()=>addSet(ei)}><Ionicons name="add" size={18} color={C.blue}/><Text style={s.addSetText}>ADD SET</Text></Pressable></>}</DraggablePanel>)}<Button kind="ghost" label="Add exercise" icon="add" onPress={()=>setAddingExercise(true)}/><Button label="Copy to current workout" icon="copy-outline" disabled={!preview.length} onPress={()=>onCopy(preview)}/></ScrollView>:workoutsForDay.length>1?<ScrollView contentContainerStyle={s.content}><Text style={s.selectedDate}>{prettyDate(selectedDay!)}</Text>{workoutsForDay.map((w,index)=><Pressable key={w.id} style={s.card} onPress={()=>choose(w)}><View style={s.cardHead}><View><Text style={s.cardTitle}>Workout {index+1}</Text><Text style={s.rowSub}>{w.exercises.map(e=>e.category).filter((v,i,a)=>a.indexOf(v)===i).join(' · ')}</Text><Text style={s.rowSub}>{w.exercises.length} exercises · {w.exercises.reduce((a,e)=>a+e.sets.length,0)} sets</Text></View><Ionicons name="chevron-forward" size={20} color={C.blue}/></View></Pressable>)}</ScrollView>:<ScrollView contentContainerStyle={s.content}><Text style={s.helper}>Choose an earlier workout. Days with workouts are marked in blue.</Text><View style={s.calendar}><View style={s.calendarNav}><Pressable onPress={()=>move(-1)} style={s.calendarArrow}><Ionicons name="chevron-back" size={22} color={C.blue}/></Pressable><Text style={s.calendarTitle}>{first.toLocaleDateString('en',{month:'long',year:'numeric'})}</Text><Pressable onPress={()=>move(1)} style={s.calendarArrow}><Ionicons name="chevron-forward" size={22} color={C.blue}/></Pressable></View><View style={s.calendarGrid}>{['MON','TUE','WED','THU','FRI','SAT','SUN'].map(day=><Text key={day} style={s.weekday}>{day}</Text>)}{cells.map((day,index)=>{const date=day?`${month}-${String(day).padStart(2,'0')}`:'';const available=byDate.has(date);const categories=[...new Set((byDate.get(date)??[]).flatMap(w=>w.exercises.map(e=>e.category)))];return <Pressable disabled={!day||!available} key={`${day}-${index}`} onPress={()=>selectDate(date)} style={s.calendarCell}>{day&&<View style={[s.dayCircle,available&&fs.copyDayAvailable]}><Text style={[s.dayText,!available&&{color:C.muted},available&&{color:C.white}]}>{day}</Text>{available&&<View style={s.workoutDots}>{categories.slice(0,5).map(category=><View key={category} style={[s.workoutDot,{backgroundColor:colorForCategory(category,data.customCategories)}]}/>)}</View>}</View>}</Pressable>})}</View></View>{!eligible.length&&<Empty icon="calendar-outline" title="No earlier workouts" copy="Finish or import an earlier workout first."/>}</ScrollView>}</SafeAreaView></Modal>;
+function CopyWorkoutModal({
+  visible,
+  targetDate,
+  onClose,
+  onCopy,
+}: {
+  visible: boolean;
+  targetDate: string;
+  onClose: () => void;
+  onCopy: (entries: ExerciseEntry[]) => void;
+}) {
+  const { data } = useStore();
+  const previewLayouts = useRef(new Map<number, { y: number; height: number }>());
+  const eligible = completedCopySources(data.workouts, targetDate);
+  const latest = eligible[0]?.date ?? targetDate;
+  const [month, setMonth] = useState(latest.slice(0, 7));
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [source, setSource] = useState<Workout | null>(null);
+  const [preview, setPreview] = useState<ExerciseEntry[]>([]);
+  const [addingExercise, setAddingExercise] = useState(false);
+  useEffect(() => {
+    if (visible) {
+      const next = eligible[0];
+      setMonth((next?.date ?? targetDate).slice(0, 7));
+      setSelectedDay(null);
+      setSource(null);
+      setPreview([]);
+      setAddingExercise(false);
+    }
+  }, [visible, targetDate]);
+  const [year, monthNumber] = month.split('-').map(Number);
+  const first = new Date(year!, monthNumber! - 1, 1);
+  const leading = (first.getDay() + 6) % 7;
+  const count = new Date(year!, monthNumber!, 0).getDate();
+  const cells = Array.from({ length: Math.ceil((leading + count) / 7) * 7 }, (_, i) => {
+    const day = i - leading + 1;
+    return day > 0 && day <= count ? day : null;
+  });
+  const byDate = new Map<string, Workout[]>();
+  eligible.forEach((w) => byDate.set(w.date, [...(byDate.get(w.date) ?? []), w]));
+  const choose = (w: Workout) => {
+    setSource(w);
+    setPreview(
+      w.exercises.map((e) => ({
+        ...e,
+        id: newId(),
+        sets: e.sets.map((set) => ({ ...set, id: newId(), comment: undefined })),
+      })),
+    );
+  };
+  const selectDate = (date: string) => {
+    const found = byDate.get(date) ?? [];
+    setSelectedDay(date);
+    if (found.length === 1) choose(found[0]!);
+  };
+  const move = (delta: number) => {
+    const next = new Date(year!, monthNumber! - 1 + delta, 1);
+    setMonth(`${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`);
+  };
+  const addSet = (ei: number) =>
+    setPreview((es) =>
+      es.map((e, i) =>
+        i === ei
+          ? {
+              ...e,
+              sets: [
+                ...e.sets,
+                { ...(e.sets.at(-1) ?? { weight: 0, reps: 0 }), id: newId(), comment: undefined },
+              ],
+            }
+          : e,
+      ),
+    );
+  const movePreview = (from: number, dragY: number) => {
+    if (Math.abs(dragY) < 12) return;
+    setPreview((items) => {
+      const origin = previewLayouts.current.get(from);
+      if (!origin) return items;
+      const draggedCenter = origin.y + origin.height / 2 + dragY;
+      let to = from;
+      let nearest = Infinity;
+      previewLayouts.current.forEach((layout, index) => {
+        const distance = Math.abs(layout.y + layout.height / 2 - draggedCenter);
+        if (distance < nearest) {
+          nearest = distance;
+          to = index;
+        }
+      });
+      if (to === from) return items;
+      const next = [...items];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved!);
+      return next;
+    });
+  };
+  const workoutsForDay = selectedDay ? (byDate.get(selectedDay) ?? []) : [];
+  const title = addingExercise
+    ? 'Add exercise'
+    : source
+      ? 'Review copied workout'
+      : workoutsForDay.length > 1
+        ? 'Choose workout'
+        : 'Copy past workout';
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+    >
+      <SafeAreaView style={s.screen}>
+        <View style={s.modalHead}>
+          <Pressable
+            onPress={
+              source || addingExercise
+                ? () => {
+                    if (addingExercise) setAddingExercise(false);
+                    else {
+                      setSource(null);
+                      setPreview([]);
+                    }
+                  }
+                : onClose
+            }
+          >
+            <Text style={s.link}>{source || addingExercise ? 'Back' : 'Cancel'}</Text>
+          </Pressable>
+          <Text style={s.modalTitle}>{title}</Text>
+          <View style={{ width: 42 }} />
+        </View>
+        {addingExercise ? (
+          <ScrollView
+            style={s.flex}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={fs.list}
+          >
+            {data.exercises
+              .filter((e) => !preview.some((p) => p.name === e.name))
+              .map((item) => (
+                <Pressable
+                  key={item.id}
+                  style={s.row}
+                  onPress={() => {
+                    setPreview((p) => [
+                      ...p,
+                      { id: newId(), name: item.name, category: item.category, sets: [] },
+                    ]);
+                    setAddingExercise(false);
+                  }}
+                >
+                  <View
+                    style={[
+                      s.exerciseIcon,
+                      { backgroundColor: colorForCategory(item.category, data.customCategories) },
+                    ]}
+                  >
+                    <Ionicons name="barbell" size={18} color={C.white} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.rowTitle}>{item.name}</Text>
+                    <Text style={s.rowSub}>{item.category}</Text>
+                  </View>
+                  <Ionicons name="add" size={20} color={C.blue} />
+                </Pressable>
+              ))}
+          </ScrollView>
+        ) : source ? (
+          <ScrollView contentContainerStyle={s.content}>
+            <View style={fs.copySummary}>
+              <Text style={s.overline}>SOURCE WORKOUT</Text>
+              <Text style={s.bigDate}>{prettyDate(source.date)}</Text>
+              <Text style={s.rowSub}>
+                {preview.length} exercises · {preview.reduce((a, e) => a + e.sets.length, 0)} sets
+              </Text>
+            </View>
+            {preview.map((e, ei) => (
+              <DraggablePanel
+                key={e.id}
+                index={ei}
+                onMove={movePreview}
+                onLayout={(event) =>
+                  previewLayouts.current.set(ei, {
+                    y: event.nativeEvent.layout.y,
+                    height: event.nativeEvent.layout.height,
+                  })
+                }
+              >
+                {(handle) => (
+                  <>
+                    <View style={s.cardHead}>
+                      {handle}
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.cardTitle}>{e.name}</Text>
+                        <Text style={s.rowSub}>{e.category}</Text>
+                      </View>
+                      <Pressable onPress={() => setPreview((p) => p.filter((_, i) => i !== ei))}>
+                        <Ionicons name="trash-outline" size={20} color={C.red} />
+                      </Pressable>
+                    </View>
+                    {e.sets.map((set, si) => (
+                      <View style={fs.copySet} key={set.id}>
+                        <Text style={s.setNo}>{si + 1}</Text>
+                        <Text style={[s.rowTitle, { flex: 1 }]}>
+                          {fmt(set.weight)} kg × {set.reps}
+                        </Text>
+                        <Pressable
+                          onPress={() =>
+                            setPreview((p) =>
+                              p.map((x, i) =>
+                                i === ei ? { ...x, sets: x.sets.filter((_, j) => j !== si) } : x,
+                              ),
+                            )
+                          }
+                        >
+                          <Ionicons name="trash-outline" size={18} color={C.muted} />
+                        </Pressable>
+                      </View>
+                    ))}
+                    <Pressable style={s.addSet} onPress={() => addSet(ei)}>
+                      <Ionicons name="add" size={18} color={C.blue} />
+                      <Text style={s.addSetText}>ADD SET</Text>
+                    </Pressable>
+                  </>
+                )}
+              </DraggablePanel>
+            ))}
+            <Button
+              kind="ghost"
+              label="Add exercise"
+              icon="add"
+              onPress={() => setAddingExercise(true)}
+            />
+            <Button
+              label="Copy to current workout"
+              icon="copy-outline"
+              disabled={!preview.length}
+              onPress={() => onCopy(preview)}
+            />
+          </ScrollView>
+        ) : workoutsForDay.length > 1 ? (
+          <ScrollView contentContainerStyle={s.content}>
+            <Text style={s.selectedDate}>{prettyDate(selectedDay!)}</Text>
+            {workoutsForDay.map((w, index) => (
+              <Pressable key={w.id} style={s.card} onPress={() => choose(w)}>
+                <View style={s.cardHead}>
+                  <View>
+                    <Text style={s.cardTitle}>Workout {index + 1}</Text>
+                    <Text style={s.rowSub}>
+                      {w.exercises
+                        .map((e) => e.category)
+                        .filter((v, i, a) => a.indexOf(v) === i)
+                        .join(' · ')}
+                    </Text>
+                    <Text style={s.rowSub}>
+                      {w.exercises.length} exercises ·{' '}
+                      {w.exercises.reduce((a, e) => a + e.sets.length, 0)} sets
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={C.blue} />
+                </View>
+              </Pressable>
+            ))}
+          </ScrollView>
+        ) : (
+          <ScrollView contentContainerStyle={s.content}>
+            <Text style={s.helper}>
+              Choose an earlier workout. Days with workouts are marked in blue.
+            </Text>
+            <View style={s.calendar}>
+              <View style={s.calendarNav}>
+                <Pressable onPress={() => move(-1)} style={s.calendarArrow}>
+                  <Ionicons name="chevron-back" size={22} color={C.blue} />
+                </Pressable>
+                <Text style={s.calendarTitle}>
+                  {first.toLocaleDateString('en', { month: 'long', year: 'numeric' })}
+                </Text>
+                <Pressable onPress={() => move(1)} style={s.calendarArrow}>
+                  <Ionicons name="chevron-forward" size={22} color={C.blue} />
+                </Pressable>
+              </View>
+              <View style={s.calendarGrid}>
+                {['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map((day) => (
+                  <Text key={day} style={s.weekday}>
+                    {day}
+                  </Text>
+                ))}
+                {cells.map((day, index) => {
+                  const date = day ? `${month}-${String(day).padStart(2, '0')}` : '';
+                  const available = byDate.has(date);
+                  const categories = [
+                    ...new Set(
+                      (byDate.get(date) ?? []).flatMap((w) => w.exercises.map((e) => e.category)),
+                    ),
+                  ];
+                  return (
+                    <Pressable
+                      disabled={!day || !available}
+                      key={`${day}-${index}`}
+                      onPress={() => selectDate(date)}
+                      style={s.calendarCell}
+                    >
+                      {day && (
+                        <View style={[s.dayCircle, available && fs.copyDayAvailable]}>
+                          <Text
+                            style={[
+                              s.dayText,
+                              !available && { color: C.muted },
+                              available && { color: C.white },
+                            ]}
+                          >
+                            {day}
+                          </Text>
+                          {available && (
+                            <View style={s.workoutDots}>
+                              {categories.slice(0, 5).map((category) => (
+                                <View
+                                  key={category}
+                                  style={[
+                                    s.workoutDot,
+                                    {
+                                      backgroundColor: colorForCategory(
+                                        category,
+                                        data.customCategories,
+                                      ),
+                                    },
+                                  ]}
+                                />
+                              ))}
+                            </View>
+                          )}
+                        </View>
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+            {!eligible.length && (
+              <Empty
+                icon="calendar-outline"
+                title="No earlier workouts"
+                copy="Finish or import an earlier workout first."
+              />
+            )}
+          </ScrollView>
+        )}
+      </SafeAreaView>
+    </Modal>
+  );
 }
 
-export function WorkoutScreen({onSaved}:{onSaved:()=>void}) {
- const {data,saveWorkout,deleteWorkout}=useStore();const persistWorkout=useWorkoutPersistence(); const activeLayouts=useRef(new Map<number,{y:number;height:number}>()); const initialWorkout=data.workouts.find(w=>w.date===today()); const [date,setDate]=useState(today()); const dateRef=useRef(date); const [editingWorkoutId,setEditingWorkoutId]=useState<string|null>(initialWorkout?.id??null); const workoutIdRef=useRef<string|null>(initialWorkout?.id??null); const [entries,setEntries]=useState<ExerciseEntry[]>(()=>initialWorkout?.exercises.map(e=>({...e,sets:e.sets.map(set=>({...set}))}))??[]); const entriesRef=useRef(entries); const [picker,setPicker]=useState(false); const [copyPicker,setCopyPicker]=useState(false); const [datePicker,setDatePicker]=useState(false); const [timer,setTimer]=useState<number|null>(null); const timerRef=useRef<ReturnType<typeof setInterval>|null>(null);
- const draftTimerRef=useRef<ReturnType<typeof setTimeout>|null>(null);
- const pendingDraftRef=useRef<Workout|null>(null);
- const mountedRef=useRef(true);
- const saveWorkoutRef=useRef(saveWorkout);saveWorkoutRef.current=saveWorkout;
- const dataRef=useRef(data);dataRef.current=data;
- const clearDraftTimer=()=>{if(draftTimerRef.current){clearTimeout(draftTimerRef.current);draftTimerRef.current=null}};
- const flushDraft=()=>{clearDraftTimer();const pending=pendingDraftRef.current;if(!pending)return;const snapshot=Platform.OS==='web'?persistWorkoutOnWeb(dataRef.current,pending):undefined;pendingDraftRef.current=null;saveWorkoutRef.current(pending,snapshot)};
- const flushOnPageHide=()=>{if(pendingDraftRef.current)flushDraft()};
- useEffect(()=>{
-  mountedRef.current=true;
-  if(Platform.OS==='web'){
-   const onHidden=()=>{if(document.visibilityState==='hidden')flushOnPageHide()};
-   const onPageHide=()=>flushOnPageHide();
-   document.addEventListener('visibilitychange',onHidden);
-   window.addEventListener('pagehide',onPageHide);
-   return ()=>{mountedRef.current=false;document.removeEventListener('visibilitychange',onHidden);window.removeEventListener('pagehide',onPageHide);if(timerRef.current)clearInterval(timerRef.current);flushDraft()};
-  }
-  const subscription=AppState.addEventListener('change',state=>{if(state!=='active')flushDraft()});
-  return ()=>{mountedRef.current=false;subscription.remove();if(timerRef.current)clearInterval(timerRef.current);flushDraft()};
- },[]);
- const changeEntries=(update:(current:ExerciseEntry[])=>ExerciseEntry[],coalesce=false)=>{
-  const current=entriesRef.current;
-  const next=update(current);
-  if(next===current)return;
-  const existing=data.workouts.find(w=>w.id===workoutIdRef.current);
-  if(removesLastSetFromCompletedWorkout(existing,current,next)){
-   const message='A completed workout needs at least one set. Use Delete workout to remove it.';
-   if(Platform.OS==='web')window.alert(message);else Alert.alert('Cannot remove last set',message);
-   return;
-  }
-  entriesRef.current=next;
-  const id=workoutIdRef.current??newId();
-  workoutIdRef.current=id;
-  setEditingWorkoutId(id);
-  setEntries(next);
-  const workout:Workout={id,date:dateRef.current,exercises:next,note:existing?.note,draft:existing?.draft??true};
-  clearDraftTimer();pendingDraftRef.current=coalesce?workout:null;
-  if(coalesce)draftTimerRef.current=setTimeout(flushDraft,250);
-  else{const snapshot=Platform.OS==='web'?persistWorkoutOnWeb(dataRef.current,workout):undefined;saveWorkout(workout,snapshot)};
- };
- const previous=(name:string)=>previousCompletedWorkout(data.workouts,name,date)?.exercises.find(e=>e.name===name);
- const pick=(e:ExerciseDefinition)=>changeEntries(x=>{if(x.some(v=>v.name===e.name))return x;const last=previous(e.name);return [...x,{id:newId(),name:e.name,category:e.category,sets:last?.sets.map(set=>({...set,id:newId(),comment:undefined}))??[]}]});
- const changeSet=(ei:number,si:number,patch:Partial<SetEntry>)=>changeEntries(es=>es.map((e,i)=>i===ei?{...e,sets:e.sets.map((v,j)=>j===si?{...v,...patch}:v)}:e),true);
- const addSet=(ei:number)=>changeEntries(es=>es.map((e,i)=>{if(i!==ei)return e;const last=e.sets.at(-1)??previous(e.name)?.sets.at(-1);return {...e,sets:[...e.sets,{id:newId(),weight:last?.weight??0,reps:last?.reps??0}]};}));
- const confirmCompletedRemoval=(title:string,message:string,remove:()=>void)=>{
-  const existing=data.workouts.find(w=>w.id===workoutIdRef.current);
-  if(!existing||existing.draft){remove();return}
-  const id=workoutIdRef.current, selectedDate=dateRef.current;
-  confirmAction(title,message,()=>{if(mountedRef.current&&workoutIdRef.current===id&&dateRef.current===selectedDate)remove()});
- };
- const removeEntry=(entryId:string)=>confirmCompletedRemoval('Remove exercise?','This exercise and its sets will be removed from the saved workout immediately.',()=>{
-  if(entriesRef.current.some(e=>e.id===entryId))changeEntries(es=>es.filter(e=>e.id!==entryId));
- });
- const removeSet=(entryId:string,setId:string)=>confirmCompletedRemoval('Remove set?','This set will be removed from the saved workout immediately.',()=>{
-  if(entriesRef.current.some(e=>e.id===entryId&&e.sets.some(set=>set.id===setId)))changeEntries(es=>es.map(e=>e.id===entryId?{...e,sets:e.sets.filter(set=>set.id!==setId)}:e));
- });
- const moveEntry=(from:number,dragY:number)=>{if(Math.abs(dragY)<12)return;changeEntries(items=>{const origin=activeLayouts.current.get(from);if(!origin)return items;const center=origin.y+origin.height/2+dragY;let to=from,nearest=Infinity;activeLayouts.current.forEach((layout,index)=>{const distance=Math.abs(layout.y+layout.height/2-center);if(distance<nearest){nearest=distance;to=index}});if(to===from)return items;const next=[...items];const [moved]=next.splice(from,1);next.splice(to,0,moved!);return next})};
- const selectTrainingDate=(nextDate:string)=>{flushDraft();if(nextDate===dateRef.current)return;const existing=data.workouts.find(w=>w.date===nextDate);const next=existing?.exercises.map(e=>({...e,sets:e.sets.map(set=>({...set}))}))??[];dateRef.current=nextDate;workoutIdRef.current=existing?.id??null;entriesRef.current=next;setDate(nextDate);setEditingWorkoutId(workoutIdRef.current);setEntries(next)};
- const startTimer=()=>{if(!data.settings.timerEnabled)return;if(timerRef.current)clearInterval(timerRef.current);setTimer(data.settings.restSeconds);timerRef.current=setInterval(()=>setTimer(v=>{if(v===null||v<=1){if(timerRef.current)clearInterval(timerRef.current);return null}return v-1}),1000)};
- const applyCopiedWorkout=(copied:ExerciseEntry[])=>{const finish=async(mode:'replace'|'merge')=>{const next=mode==='replace'?copied:(()=>{const merged=entriesRef.current.map(e=>({...e,sets:[...e.sets]}));copied.forEach(e=>{const found=merged.find(x=>x.name===e.name);if(found)found.sets.push(...e.sets);else merged.push(e)});return merged})();changeEntries(()=>next);setCopyPicker(false)};if(!entriesRef.current.length){void finish('replace');return}if(Platform.OS==='web'){const answer=(globalThis as any).prompt('The current workout already has exercises. Type “replace” or “merge”.','merge');if(answer===null)return;void finish(String(answer).toLowerCase().startsWith('r')?'replace':'merge');return}Alert.alert('Copy workout','How should the selected exercises be added?',[{text:'Cancel',style:'cancel'},{text:'Replace current',style:'destructive',onPress:()=>void finish('replace')},{text:'Merge',onPress:()=>void finish('merge')}])};
- const removeWorkout=()=>{if(!editingWorkoutId)return;confirmAction('Delete workout?','This workout and all of its sets will be permanently deleted.',()=>{clearDraftTimer();pendingDraftRef.current=null;deleteWorkout(editingWorkoutId);entriesRef.current=[];workoutIdRef.current=null;setEntries([]);setEditingWorkoutId(null);onSaved()})};
- const save=async()=>{const clean=entriesRef.current.filter(e=>e.sets.length);if(!clean.length){flushDraft();return Alert.alert('Nothing to save','Add at least one set.')}clearDraftTimer();pendingDraftRef.current=null;const id=workoutIdRef.current??newId();const workout:Workout={id,date:dateRef.current,exercises:clean,note:data.workouts.find(w=>w.id===id)?.note,draft:false};const snapshot=Platform.OS==='web'?persistWorkoutOnWeb(dataRef.current,workout):undefined;const result=await persistWorkout(workout,snapshot);if(result.backupError)Alert.alert('Workout saved, backup failed',String(result.backupError));else if(result.backupSlot)Alert.alert('Workout saved',`Save LiftNotes-backup-${result.backupSlot}.json in the same Files folder. Replace the existing file when asked.`);entriesRef.current=[];workoutIdRef.current=null;setEntries([]);setEditingWorkoutId(null);onSaved();};
- return <View style={s.flex}><ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled"><Header title="Workout" action={<Pressable onPress={save}><Text style={s.link}>Finish</Text></Pressable>}/><View style={s.dateStrip}><Text style={s.overline}>TRAINING DATE</Text><Text style={s.bigDate}>{prettyDate(date)}</Text><Pressable onPress={()=>setDatePicker(true)} style={fs.datePickerButton}><Text style={s.dateInput}>Tap to change date</Text><Ionicons name="calendar-outline" size={17} color="#91c5ff"/></Pressable></View><Pressable onPress={()=>setCopyPicker(true)} style={({pressed})=>[fs.copyWorkout,pressed&&{opacity:.55}]}><View style={fs.copyWorkoutIcon}><Ionicons name="calendar-outline" size={18} color={C.blue}/></View><View style={{flex:1}}><Text style={fs.copyWorkoutTitle}>Copy a past workout</Text><Text style={s.rowSub}>Choose from your workout calendar</Text></View><Ionicons name="chevron-forward" size={18} color={C.muted}/></Pressable>{timer!==null&&<View style={fs.timer}><Ionicons name="timer" size={20} color={C.blue}/><Text style={fs.timerText}>REST  {Math.floor(timer/60)}:{String(timer%60).padStart(2,'0')}</Text><Pressable onPress={()=>setTimer(null)}><Ionicons name="close" size={20} color={C.muted}/></Pressable></View>}{entries.length===0&&<Empty icon="barbell" title="Ready when you are" copy="Build today's workout one exercise at a time."/>}{entries.map((e,ei)=>{const prev=previous(e.name);return <DraggablePanel key={e.id} index={ei} onMove={moveEntry} onLayout={event=>activeLayouts.current.set(ei,{y:event.nativeEvent.layout.y,height:event.nativeEvent.layout.height})}>{handle=><><View style={s.cardHead}>{handle}<View style={{flex:1}}><Text style={s.cardTitle}>{e.name}</Text><Text style={s.rowSub}>{e.category}{prev?`  ·  Last ${prettyDate(data.workouts.find(w=>w.exercises.includes(prev))?.date??date)}`:''}</Text></View><Pressable onPress={()=>removeEntry(e.id)}><Ionicons name="trash-outline" size={20} color={C.red}/></Pressable></View><View style={fs.setHeader}><Text style={[fs.setLabel,{width:32}]}>SET</Text><Text style={fs.setLabel}>PREVIOUS</Text><Text style={fs.setLabel}>KG</Text><Text style={fs.setLabel}>REPS</Text><View style={{width:26}}/></View>{e.sets.map((set,si)=>{const projected=projectedOneRepMax(set.weight,set.reps);return <View style={fs.workoutSet} key={set.id}><View style={s.setRow}><Text style={s.setNo}>{si+1}</Text><Text style={fs.previous}>{prev?.sets[si]?`${fmt(prev.sets[si]!.weight)} × ${prev.sets[si]!.reps}`:'—'}</Text><WeightInput value={set.weight} onChange={weight=>changeSet(ei,si,{weight})} style={s.setInput}/><TextInput keyboardType="number-pad" selectTextOnFocus value={String(set.reps)} onChangeText={v=>changeSet(ei,si,{reps:Number(v)||0})} style={s.setInput}/><Pressable onPress={()=>removeSet(e.id,set.id)}><Ionicons name="close-circle" size={21} color={C.muted}/></Pressable></View><View style={fs.setProjectionRow}><Text style={fs.setProjection}>{projected!==null?`Projected 1RM  ${fmt(projected)} kg`:'Projected 1RM  —'}</Text><View style={fs.weightBumps}><Pressable accessibilityLabel="Decrease weight by 2.5 kilograms" onPress={()=>changeSet(ei,si,{weight:Math.max(0,set.weight-2.5)})} style={fs.weightBump}><Text style={fs.weightBumpText}>−2.5</Text></Pressable><Pressable accessibilityLabel="Increase weight by 2.5 kilograms" onPress={()=>changeSet(ei,si,{weight:set.weight+2.5})} style={fs.weightBump}><Text style={fs.weightBumpText}>+2.5</Text></Pressable></View></View></View>})}<Pressable style={s.addSet} onPress={()=>{addSet(ei);startTimer();}}><Ionicons name="add" size={18} color={C.blue}/><Text style={s.addSetText}>ADD SET</Text></Pressable></>}</DraggablePanel>})}<Button label="Add exercise" icon="add" onPress={()=>setPicker(true)}/>{editingWorkoutId&&<Button kind="danger" label="Delete workout" icon="trash-outline" onPress={removeWorkout}/>}</ScrollView><ExercisePicker visible={picker} onClose={()=>setPicker(false)} onPick={pick}/><CopyWorkoutModal visible={copyPicker} targetDate={date} onClose={()=>setCopyPicker(false)} onCopy={applyCopiedWorkout}/><DatePickerModal visible={datePicker} value={date} onClose={()=>setDatePicker(false)} onSelect={selectTrainingDate}/></View>;
+export function WorkoutScreen({ onSaved }: { onSaved: () => void }) {
+  const { data, saveWorkout, deleteWorkout } = useStore();
+  const persistWorkout = useWorkoutPersistence();
+  const activeLayouts = useRef(new Map<number, { y: number; height: number }>());
+  const initialWorkout = data.workouts.find((w) => w.date === today());
+  const [date, setDate] = useState(today());
+  const dateRef = useRef(date);
+  const [editingWorkoutId, setEditingWorkoutId] = useState<string | null>(
+    initialWorkout?.id ?? null,
+  );
+  const workoutIdRef = useRef<string | null>(initialWorkout?.id ?? null);
+  const [entries, setEntries] = useState<ExerciseEntry[]>(
+    () =>
+      initialWorkout?.exercises.map((e) => ({ ...e, sets: e.sets.map((set) => ({ ...set })) })) ??
+      [],
+  );
+  const entriesRef = useRef(entries);
+  const [picker, setPicker] = useState(false);
+  const [copyPicker, setCopyPicker] = useState(false);
+  const [datePicker, setDatePicker] = useState(false);
+  const [timer, setTimer] = useState<number | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingDraftRef = useRef<Workout | null>(null);
+  const mountedRef = useRef(true);
+  const saveWorkoutRef = useRef(saveWorkout);
+  saveWorkoutRef.current = saveWorkout;
+  const dataRef = useRef(data);
+  dataRef.current = data;
+  const clearDraftTimer = () => {
+    if (draftTimerRef.current) {
+      clearTimeout(draftTimerRef.current);
+      draftTimerRef.current = null;
+    }
+  };
+  const flushDraft = () => {
+    clearDraftTimer();
+    const pending = pendingDraftRef.current;
+    if (!pending) return;
+    const snapshot =
+      Platform.OS === 'web' ? persistWorkoutOnWeb(dataRef.current, pending) : undefined;
+    pendingDraftRef.current = null;
+    saveWorkoutRef.current(pending, snapshot);
+  };
+  const flushOnPageHide = () => {
+    if (pendingDraftRef.current) flushDraft();
+  };
+  useEffect(() => {
+    mountedRef.current = true;
+    if (Platform.OS === 'web') {
+      const onHidden = () => {
+        if (document.visibilityState === 'hidden') flushOnPageHide();
+      };
+      const onPageHide = () => flushOnPageHide();
+      document.addEventListener('visibilitychange', onHidden);
+      window.addEventListener('pagehide', onPageHide);
+      return () => {
+        mountedRef.current = false;
+        document.removeEventListener('visibilitychange', onHidden);
+        window.removeEventListener('pagehide', onPageHide);
+        if (timerRef.current) clearInterval(timerRef.current);
+        flushDraft();
+      };
+    }
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') flushDraft();
+    });
+    return () => {
+      mountedRef.current = false;
+      subscription.remove();
+      if (timerRef.current) clearInterval(timerRef.current);
+      flushDraft();
+    };
+  }, []);
+  const changeEntries = (
+    update: (current: ExerciseEntry[]) => ExerciseEntry[],
+    coalesce = false,
+  ) => {
+    const current = entriesRef.current;
+    const next = update(current);
+    if (next === current) return;
+    const existing = data.workouts.find((w) => w.id === workoutIdRef.current);
+    if (removesLastSetFromCompletedWorkout(existing, current, next)) {
+      const message =
+        'A completed workout needs at least one set. Use Delete workout to remove it.';
+      if (Platform.OS === 'web') window.alert(message);
+      else Alert.alert('Cannot remove last set', message);
+      return;
+    }
+    entriesRef.current = next;
+    const id = workoutIdRef.current ?? newId();
+    workoutIdRef.current = id;
+    setEditingWorkoutId(id);
+    setEntries(next);
+    const workout: Workout = {
+      id,
+      date: dateRef.current,
+      exercises: next,
+      note: existing?.note,
+      draft: existing?.draft ?? true,
+    };
+    clearDraftTimer();
+    pendingDraftRef.current = coalesce ? workout : null;
+    if (coalesce) draftTimerRef.current = setTimeout(flushDraft, 250);
+    else {
+      const snapshot =
+        Platform.OS === 'web' ? persistWorkoutOnWeb(dataRef.current, workout) : undefined;
+      saveWorkout(workout, snapshot);
+    }
+  };
+  const previous = (name: string) =>
+    previousCompletedWorkout(data.workouts, name, date)?.exercises.find((e) => e.name === name);
+  const pick = (e: ExerciseDefinition) =>
+    changeEntries((x) => {
+      if (x.some((v) => v.name === e.name)) return x;
+      const last = previous(e.name);
+      return [
+        ...x,
+        {
+          id: newId(),
+          name: e.name,
+          category: e.category,
+          sets: last?.sets.map((set) => ({ ...set, id: newId(), comment: undefined })) ?? [],
+        },
+      ];
+    });
+  const changeSet = (ei: number, si: number, patch: Partial<SetEntry>) =>
+    changeEntries(
+      (es) =>
+        es.map((e, i) =>
+          i === ei ? { ...e, sets: e.sets.map((v, j) => (j === si ? { ...v, ...patch } : v)) } : e,
+        ),
+      true,
+    );
+  const addSet = (ei: number) =>
+    changeEntries((es) =>
+      es.map((e, i) => {
+        if (i !== ei) return e;
+        const last = e.sets.at(-1) ?? previous(e.name)?.sets.at(-1);
+        return {
+          ...e,
+          sets: [...e.sets, { id: newId(), weight: last?.weight ?? 0, reps: last?.reps ?? 0 }],
+        };
+      }),
+    );
+  const confirmCompletedRemoval = (title: string, message: string, remove: () => void) => {
+    const existing = data.workouts.find((w) => w.id === workoutIdRef.current);
+    if (!existing || existing.draft) {
+      remove();
+      return;
+    }
+    const id = workoutIdRef.current,
+      selectedDate = dateRef.current;
+    confirmAction(title, message, () => {
+      if (mountedRef.current && workoutIdRef.current === id && dateRef.current === selectedDate)
+        remove();
+    });
+  };
+  const removeEntry = (entryId: string) =>
+    confirmCompletedRemoval(
+      'Remove exercise?',
+      'This exercise and its sets will be removed from the saved workout immediately.',
+      () => {
+        if (entriesRef.current.some((e) => e.id === entryId))
+          changeEntries((es) => es.filter((e) => e.id !== entryId));
+      },
+    );
+  const removeSet = (entryId: string, setId: string) =>
+    confirmCompletedRemoval(
+      'Remove set?',
+      'This set will be removed from the saved workout immediately.',
+      () => {
+        if (
+          entriesRef.current.some((e) => e.id === entryId && e.sets.some((set) => set.id === setId))
+        )
+          changeEntries((es) =>
+            es.map((e) =>
+              e.id === entryId ? { ...e, sets: e.sets.filter((set) => set.id !== setId) } : e,
+            ),
+          );
+      },
+    );
+  const moveEntry = (from: number, dragY: number) => {
+    if (Math.abs(dragY) < 12) return;
+    changeEntries((items) => {
+      const origin = activeLayouts.current.get(from);
+      if (!origin) return items;
+      const center = origin.y + origin.height / 2 + dragY;
+      let to = from,
+        nearest = Infinity;
+      activeLayouts.current.forEach((layout, index) => {
+        const distance = Math.abs(layout.y + layout.height / 2 - center);
+        if (distance < nearest) {
+          nearest = distance;
+          to = index;
+        }
+      });
+      if (to === from) return items;
+      const next = [...items];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved!);
+      return next;
+    });
+  };
+  const selectTrainingDate = (nextDate: string) => {
+    flushDraft();
+    if (nextDate === dateRef.current) return;
+    const existing = data.workouts.find((w) => w.date === nextDate);
+    const next =
+      existing?.exercises.map((e) => ({ ...e, sets: e.sets.map((set) => ({ ...set })) })) ?? [];
+    dateRef.current = nextDate;
+    workoutIdRef.current = existing?.id ?? null;
+    entriesRef.current = next;
+    setDate(nextDate);
+    setEditingWorkoutId(workoutIdRef.current);
+    setEntries(next);
+  };
+  const startTimer = () => {
+    if (!data.settings.timerEnabled) return;
+    if (timerRef.current) clearInterval(timerRef.current);
+    setTimer(data.settings.restSeconds);
+    timerRef.current = setInterval(
+      () =>
+        setTimer((v) => {
+          if (v === null || v <= 1) {
+            if (timerRef.current) clearInterval(timerRef.current);
+            return null;
+          }
+          return v - 1;
+        }),
+      1000,
+    );
+  };
+  const applyCopiedWorkout = (copied: ExerciseEntry[]) => {
+    const finish = async (mode: 'replace' | 'merge') => {
+      const next =
+        mode === 'replace'
+          ? copied
+          : (() => {
+              const merged = entriesRef.current.map((e) => ({ ...e, sets: [...e.sets] }));
+              copied.forEach((e) => {
+                const found = merged.find((x) => x.name === e.name);
+                if (found) found.sets.push(...e.sets);
+                else merged.push(e);
+              });
+              return merged;
+            })();
+      changeEntries(() => next);
+      setCopyPicker(false);
+    };
+    if (!entriesRef.current.length) {
+      void finish('replace');
+      return;
+    }
+    if (Platform.OS === 'web') {
+      const answer = (globalThis as any).prompt(
+        'The current workout already has exercises. Type “replace” or “merge”.',
+        'merge',
+      );
+      if (answer === null) return;
+      void finish(String(answer).toLowerCase().startsWith('r') ? 'replace' : 'merge');
+      return;
+    }
+    Alert.alert('Copy workout', 'How should the selected exercises be added?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Replace current', style: 'destructive', onPress: () => void finish('replace') },
+      { text: 'Merge', onPress: () => void finish('merge') },
+    ]);
+  };
+  const removeWorkout = () => {
+    if (!editingWorkoutId) return;
+    confirmAction(
+      'Delete workout?',
+      'This workout and all of its sets will be permanently deleted.',
+      () => {
+        clearDraftTimer();
+        pendingDraftRef.current = null;
+        deleteWorkout(editingWorkoutId);
+        entriesRef.current = [];
+        workoutIdRef.current = null;
+        setEntries([]);
+        setEditingWorkoutId(null);
+        onSaved();
+      },
+    );
+  };
+  const save = async () => {
+    const clean = entriesRef.current.filter((e) => e.sets.length);
+    if (!clean.length) {
+      flushDraft();
+      return Alert.alert('Nothing to save', 'Add at least one set.');
+    }
+    clearDraftTimer();
+    pendingDraftRef.current = null;
+    const id = workoutIdRef.current ?? newId();
+    const workout: Workout = {
+      id,
+      date: dateRef.current,
+      exercises: clean,
+      note: data.workouts.find((w) => w.id === id)?.note,
+      draft: false,
+    };
+    const snapshot =
+      Platform.OS === 'web' ? persistWorkoutOnWeb(dataRef.current, workout) : undefined;
+    const result = await persistWorkout(workout, snapshot);
+    if (result.backupError) Alert.alert('Workout saved, backup failed', String(result.backupError));
+    else if (result.backupSlot)
+      Alert.alert(
+        'Workout saved',
+        `Save LiftNotes-backup-${result.backupSlot}.json in the same Files folder. ` +
+          'Replace the existing file when asked.',
+      );
+    entriesRef.current = [];
+    workoutIdRef.current = null;
+    setEntries([]);
+    setEditingWorkoutId(null);
+    onSaved();
+  };
+  return (
+    <View style={s.flex}>
+      <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+        <Header
+          title="Workout"
+          action={
+            <Pressable onPress={save}>
+              <Text style={s.link}>Finish</Text>
+            </Pressable>
+          }
+        />
+        <View style={s.dateStrip}>
+          <Text style={s.overline}>TRAINING DATE</Text>
+          <Text style={s.bigDate}>{prettyDate(date)}</Text>
+          <Pressable onPress={() => setDatePicker(true)} style={fs.datePickerButton}>
+            <Text style={s.dateInput}>Tap to change date</Text>
+            <Ionicons name="calendar-outline" size={17} color="#91c5ff" />
+          </Pressable>
+        </View>
+        <Pressable
+          onPress={() => setCopyPicker(true)}
+          style={({ pressed }) => [fs.copyWorkout, pressed && { opacity: 0.55 }]}
+        >
+          <View style={fs.copyWorkoutIcon}>
+            <Ionicons name="calendar-outline" size={18} color={C.blue} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={fs.copyWorkoutTitle}>Copy a past workout</Text>
+            <Text style={s.rowSub}>Choose from your workout calendar</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={C.muted} />
+        </Pressable>
+        {timer !== null && (
+          <View style={fs.timer}>
+            <Ionicons name="timer" size={20} color={C.blue} />
+            <Text style={fs.timerText}>
+              REST {Math.floor(timer / 60)}:{String(timer % 60).padStart(2, '0')}
+            </Text>
+            <Pressable onPress={() => setTimer(null)}>
+              <Ionicons name="close" size={20} color={C.muted} />
+            </Pressable>
+          </View>
+        )}
+        {entries.length === 0 && (
+          <Empty
+            icon="barbell"
+            title="Ready when you are"
+            copy="Build today's workout one exercise at a time."
+          />
+        )}
+        {entries.map((e, ei) => {
+          const prev = previous(e.name);
+          const prevDate = prev
+            ? data.workouts.find((w) => w.exercises.includes(prev))?.date
+            : undefined;
+          return (
+            <DraggablePanel
+              key={e.id}
+              index={ei}
+              onMove={moveEntry}
+              onLayout={(event) =>
+                activeLayouts.current.set(ei, {
+                  y: event.nativeEvent.layout.y,
+                  height: event.nativeEvent.layout.height,
+                })
+              }
+            >
+              {(handle) => (
+                <>
+                  <View style={s.cardHead}>
+                    {handle}
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.cardTitle}>{e.name}</Text>
+                      <Text style={s.rowSub}>
+                        {e.category}
+                        {prev ? `  ·  Last ${prettyDate(prevDate ?? date)}` : ''}
+                      </Text>
+                    </View>
+                    <Pressable onPress={() => removeEntry(e.id)}>
+                      <Ionicons name="trash-outline" size={20} color={C.red} />
+                    </Pressable>
+                  </View>
+                  <View style={fs.setHeader}>
+                    <Text style={[fs.setLabel, { width: 32 }]}>SET</Text>
+                    <Text style={fs.setLabel}>PREVIOUS</Text>
+                    <Text style={fs.setLabel}>KG</Text>
+                    <Text style={fs.setLabel}>REPS</Text>
+                    <View style={{ width: 26 }} />
+                  </View>
+                  {e.sets.map((set, si) => {
+                    const projected = projectedOneRepMax(set.weight, set.reps);
+                    return (
+                      <View style={fs.workoutSet} key={set.id}>
+                        <View style={s.setRow}>
+                          <Text style={s.setNo}>{si + 1}</Text>
+                          <Text style={fs.previous}>
+                            {prev?.sets[si]
+                              ? `${fmt(prev.sets[si]!.weight)} × ${prev.sets[si]!.reps}`
+                              : '—'}
+                          </Text>
+                          <WeightInput
+                            value={set.weight}
+                            onChange={(weight) => changeSet(ei, si, { weight })}
+                            style={s.setInput}
+                          />
+                          <TextInput
+                            keyboardType="number-pad"
+                            selectTextOnFocus
+                            value={String(set.reps)}
+                            onChangeText={(v) => changeSet(ei, si, { reps: Number(v) || 0 })}
+                            style={s.setInput}
+                          />
+                          <Pressable onPress={() => removeSet(e.id, set.id)}>
+                            <Ionicons name="close-circle" size={21} color={C.muted} />
+                          </Pressable>
+                        </View>
+                        <View style={fs.setProjectionRow}>
+                          <Text style={fs.setProjection}>
+                            {projected !== null
+                              ? `Projected 1RM  ${fmt(projected)} kg`
+                              : 'Projected 1RM  —'}
+                          </Text>
+                          <View style={fs.weightBumps}>
+                            <Pressable
+                              accessibilityLabel="Decrease weight by 2.5 kilograms"
+                              onPress={() =>
+                                changeSet(ei, si, { weight: Math.max(0, set.weight - 2.5) })
+                              }
+                              style={fs.weightBump}
+                            >
+                              <Text style={fs.weightBumpText}>−2.5</Text>
+                            </Pressable>
+                            <Pressable
+                              accessibilityLabel="Increase weight by 2.5 kilograms"
+                              onPress={() => changeSet(ei, si, { weight: set.weight + 2.5 })}
+                              style={fs.weightBump}
+                            >
+                              <Text style={fs.weightBumpText}>+2.5</Text>
+                            </Pressable>
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  })}
+                  <Pressable
+                    style={s.addSet}
+                    onPress={() => {
+                      addSet(ei);
+                      startTimer();
+                    }}
+                  >
+                    <Ionicons name="add" size={18} color={C.blue} />
+                    <Text style={s.addSetText}>ADD SET</Text>
+                  </Pressable>
+                </>
+              )}
+            </DraggablePanel>
+          );
+        })}
+        <Button label="Add exercise" icon="add" onPress={() => setPicker(true)} />
+        {editingWorkoutId && (
+          <Button
+            kind="danger"
+            label="Delete workout"
+            icon="trash-outline"
+            onPress={removeWorkout}
+          />
+        )}
+      </ScrollView>
+      <ExercisePicker visible={picker} onClose={() => setPicker(false)} onPick={pick} />
+      <CopyWorkoutModal
+        visible={copyPicker}
+        targetDate={date}
+        onClose={() => setCopyPicker(false)}
+        onCopy={applyCopiedWorkout}
+      />
+      <DatePickerModal
+        visible={datePicker}
+        value={date}
+        onClose={() => setDatePicker(false)}
+        onSelect={selectTrainingDate}
+      />
+    </View>
+  );
 }

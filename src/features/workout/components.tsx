@@ -1,6 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, type LayoutChangeEvent, Modal, PanResponder, Platform, Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from 'react-native';
+import {
+  Alert,
+  Animated,
+  type LayoutChangeEvent,
+  Modal,
+  PanResponder,
+  Platform,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { BUILT_IN_CATEGORIES, CATEGORY_COLORS, colorForCategory } from '../../categories';
 import { prettyDate, today, useStore } from '../../store';
 import { s } from '../../styles';
@@ -9,33 +22,395 @@ import type { ExerciseDefinition } from '../../types';
 import { Button, Empty } from '../../ui';
 import { fs } from './styles';
 
-export function ExercisePicker({visible,onClose,onPick}:{visible:boolean;onClose:()=>void;onPick:(e:ExerciseDefinition)=>void}) {
-  const {data,addExercise,addCategory}=useStore(); const [query,setQuery]=useState(''); const [creating,setCreating]=useState(false); const [category,setCategory]=useState('Chest'); const [newCategory,setNewCategory]=useState(''); const [newColor,setNewColor]=useState(CATEGORY_COLORS[0]!); const [customMode,setCustomMode]=useState(false); const [categoryFilter,setCategoryFilter]=useState('All');
-  const categories=[...BUILT_IN_CATEGORIES,...data.customCategories];
-  const availableCategories=[...new Set(data.exercises.map(e=>e.category))].sort();
-  const filtered=data.exercises.filter(e=>(categoryFilter==='All'||e.category===categoryFilter)&&`${e.name} ${e.category}`.toLowerCase().includes(query.toLowerCase()));
-  const create=()=>{if(!query.trim())return;if(customMode){if(!newCategory.trim())return Alert.alert('Category required','Give the new category a name.');addCategory(newCategory,newColor);setCategory(newCategory.trim())}const selected=customMode?newCategory.trim():category;onPick(addExercise(query.trim(),selected));setQuery('');setCreating(false);setCustomMode(false);onClose()};
-  return <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}><SafeAreaView style={s.screen}><View style={s.modalHead}><Pressable onPress={onClose}><Text style={s.link}>Cancel</Text></Pressable><Text style={s.modalTitle}>Add exercise</Text><Pressable onPress={()=>setCreating(!creating)}><Ionicons name="add-circle" size={25} color={C.blue}/></Pressable></View><View style={s.search}><Ionicons name="search" size={18} color={C.muted}/><TextInput value={query} onChangeText={setQuery} placeholder={creating?'New exercise name':'Search exercises'} placeholderTextColor={C.muted} style={s.searchInput}/></View>{!creating&&<ScrollView horizontal showsHorizontalScrollIndicator={false} style={fs.filterStrip} contentContainerStyle={s.filterRow}><Pressable onPress={()=>setCategoryFilter('All')} style={[s.filterChip,categoryFilter==='All'&&s.filterChipActive]}><Text style={[s.filterChipText,categoryFilter==='All'&&s.filterChipTextActive]}>All</Text></Pressable>{availableCategories.map(name=><Pressable key={name} onPress={()=>setCategoryFilter(name)} style={[s.filterChip,categoryFilter===name&&s.filterChipActive]}><View style={[s.categorySwatch,{backgroundColor:colorForCategory(name,data.customCategories)}]}/><Text style={[s.filterChipText,categoryFilter===name&&s.filterChipTextActive]}>{name}</Text></Pressable>)}</ScrollView>}{creating&&<ScrollView style={fs.createBox}><Text style={s.label}>MUSCLE GROUP</Text><View style={fs.categoryChoices}>{categories.map(c=><Pressable key={c.name} onPress={()=>{setCategory(c.name);setCustomMode(false)}} style={[fs.categoryChoice,category===c.name&&!customMode&&fs.categoryChoiceActive]}><View style={[s.categorySwatch,{backgroundColor:c.color}]}/><Text style={fs.categoryChoiceText}>{c.name}</Text></Pressable>)}<Pressable onPress={()=>setCustomMode(true)} style={[fs.categoryChoice,customMode&&fs.categoryChoiceActive]}><Ionicons name="add" size={16} color={C.blue}/><Text style={fs.categoryChoiceText}>Add new</Text></Pressable></View>{customMode&&<View style={fs.customCategory}><TextInput value={newCategory} onChangeText={setNewCategory} style={s.input} placeholder="New muscle group name" placeholderTextColor={C.muted}/><Text style={s.label}>COLOR</Text><View style={fs.colorChoices}>{CATEGORY_COLORS.map(color=><Pressable key={color} onPress={()=>setNewColor(color)} style={[fs.colorChoice,{backgroundColor:color},newColor===color&&fs.colorChoiceActive]}/>)}</View></View>}<Button label="Create exercise" onPress={create}/></ScrollView>}<ScrollView style={s.flex} keyboardShouldPersistTaps="handled" contentContainerStyle={fs.list}>{!creating&&filtered.map(item=><Pressable key={item.id} style={s.row} onPress={()=>{onPick(item);onClose();}}><View style={[s.exerciseIcon,{backgroundColor:colorForCategory(item.category,data.customCategories)}]}><Ionicons name="barbell" size={18} color={C.white}/></View><View style={{flex:1}}><Text style={s.rowTitle}>{item.name}</Text><Text style={s.rowSub}>{item.category}</Text></View><Ionicons name="chevron-forward" size={18} color={C.muted}/></Pressable>)}{!creating&&!filtered.length&&<Empty icon="search" title="No exercises" copy="Tap + to create the searched exercise."/>}</ScrollView></SafeAreaView></Modal>;
+export function ExercisePicker({
+  visible,
+  onClose,
+  onPick,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onPick: (e: ExerciseDefinition) => void;
+}) {
+  const { data, addExercise, addCategory } = useStore();
+  const [query, setQuery] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [category, setCategory] = useState('Chest');
+  const [newCategory, setNewCategory] = useState('');
+  const [newColor, setNewColor] = useState(CATEGORY_COLORS[0]!);
+  const [customMode, setCustomMode] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState('All');
+  const categories = [...BUILT_IN_CATEGORIES, ...data.customCategories];
+  const availableCategories = [...new Set(data.exercises.map((e) => e.category))].sort();
+  const filtered = data.exercises.filter(
+    (e) =>
+      (categoryFilter === 'All' || e.category === categoryFilter) &&
+      `${e.name} ${e.category}`.toLowerCase().includes(query.toLowerCase()),
+  );
+  const create = () => {
+    if (!query.trim()) return;
+    if (customMode) {
+      if (!newCategory.trim())
+        return Alert.alert('Category required', 'Give the new category a name.');
+      addCategory(newCategory, newColor);
+      setCategory(newCategory.trim());
+    }
+    const selected = customMode ? newCategory.trim() : category;
+    onPick(addExercise(query.trim(), selected));
+    setQuery('');
+    setCreating(false);
+    setCustomMode(false);
+    onClose();
+  };
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+    >
+      <SafeAreaView style={s.screen}>
+        <View style={s.modalHead}>
+          <Pressable onPress={onClose}>
+            <Text style={s.link}>Cancel</Text>
+          </Pressable>
+          <Text style={s.modalTitle}>Add exercise</Text>
+          <Pressable onPress={() => setCreating(!creating)}>
+            <Ionicons name="add-circle" size={25} color={C.blue} />
+          </Pressable>
+        </View>
+        <View style={s.search}>
+          <Ionicons name="search" size={18} color={C.muted} />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder={creating ? 'New exercise name' : 'Search exercises'}
+            placeholderTextColor={C.muted}
+            style={s.searchInput}
+          />
+        </View>
+        {!creating && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={fs.filterStrip}
+            contentContainerStyle={s.filterRow}
+          >
+            <Pressable
+              onPress={() => setCategoryFilter('All')}
+              style={[s.filterChip, categoryFilter === 'All' && s.filterChipActive]}
+            >
+              <Text style={[s.filterChipText, categoryFilter === 'All' && s.filterChipTextActive]}>
+                All
+              </Text>
+            </Pressable>
+            {availableCategories.map((name) => (
+              <Pressable
+                key={name}
+                onPress={() => setCategoryFilter(name)}
+                style={[s.filterChip, categoryFilter === name && s.filterChipActive]}
+              >
+                <View
+                  style={[
+                    s.categorySwatch,
+                    { backgroundColor: colorForCategory(name, data.customCategories) },
+                  ]}
+                />
+                <Text style={[s.filterChipText, categoryFilter === name && s.filterChipTextActive]}>
+                  {name}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
+        {creating && (
+          <ScrollView style={fs.createBox}>
+            <Text style={s.label}>MUSCLE GROUP</Text>
+            <View style={fs.categoryChoices}>
+              {categories.map((c) => (
+                <Pressable
+                  key={c.name}
+                  onPress={() => {
+                    setCategory(c.name);
+                    setCustomMode(false);
+                  }}
+                  style={[
+                    fs.categoryChoice,
+                    category === c.name && !customMode && fs.categoryChoiceActive,
+                  ]}
+                >
+                  <View style={[s.categorySwatch, { backgroundColor: c.color }]} />
+                  <Text style={fs.categoryChoiceText}>{c.name}</Text>
+                </Pressable>
+              ))}
+              <Pressable
+                onPress={() => setCustomMode(true)}
+                style={[fs.categoryChoice, customMode && fs.categoryChoiceActive]}
+              >
+                <Ionicons name="add" size={16} color={C.blue} />
+                <Text style={fs.categoryChoiceText}>Add new</Text>
+              </Pressable>
+            </View>
+            {customMode && (
+              <View style={fs.customCategory}>
+                <TextInput
+                  value={newCategory}
+                  onChangeText={setNewCategory}
+                  style={s.input}
+                  placeholder="New muscle group name"
+                  placeholderTextColor={C.muted}
+                />
+                <Text style={s.label}>COLOR</Text>
+                <View style={fs.colorChoices}>
+                  {CATEGORY_COLORS.map((color) => (
+                    <Pressable
+                      key={color}
+                      onPress={() => setNewColor(color)}
+                      style={[
+                        fs.colorChoice,
+                        { backgroundColor: color },
+                        newColor === color && fs.colorChoiceActive,
+                      ]}
+                    />
+                  ))}
+                </View>
+              </View>
+            )}
+            <Button label="Create exercise" onPress={create} />
+          </ScrollView>
+        )}
+        <ScrollView
+          style={s.flex}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={fs.list}
+        >
+          {!creating &&
+            filtered.map((item) => (
+              <Pressable
+                key={item.id}
+                style={s.row}
+                onPress={() => {
+                  onPick(item);
+                  onClose();
+                }}
+              >
+                <View
+                  style={[
+                    s.exerciseIcon,
+                    { backgroundColor: colorForCategory(item.category, data.customCategories) },
+                  ]}
+                >
+                  <Ionicons name="barbell" size={18} color={C.white} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.rowTitle}>{item.name}</Text>
+                  <Text style={s.rowSub}>{item.category}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={C.muted} />
+              </Pressable>
+            ))}
+          {!creating && !filtered.length && (
+            <Empty
+              icon="search"
+              title="No exercises"
+              copy="Tap + to create the searched exercise."
+            />
+          )}
+        </ScrollView>
+      </SafeAreaView>
+    </Modal>
+  );
 }
 
-export function DraggablePanel({index,onMove,onLayout,children}:{index:number;onMove:(from:number,dragY:number)=>void;onLayout:(event:LayoutChangeEvent)=>void;children:(handle:React.ReactNode)=>React.ReactNode}) {
- const translateY=useRef(new Animated.Value(0)).current;const [active,setActive]=useState(false);const indexRef=useRef(index);const moveRef=useRef(onMove);indexRef.current=index;moveRef.current=onMove;
- const responder=useRef(PanResponder.create({
-  onStartShouldSetPanResponder:()=>true,
-  onMoveShouldSetPanResponder:()=>true,
-  onPanResponderGrant:()=>setActive(true),
-  onPanResponderMove:(_event,gesture)=>translateY.setValue(gesture.dy),
-  onPanResponderTerminationRequest:()=>false,
-  onShouldBlockNativeResponder:()=>true,
-  onPanResponderRelease:(_event,gesture)=>{translateY.setValue(0);setActive(false);moveRef.current(indexRef.current,gesture.dy)},
-  onPanResponderTerminate:(_event,gesture)=>{translateY.setValue(0);setActive(false);moveRef.current(indexRef.current,gesture.dy)},
- })).current;
- const handle=<View accessibilityLabel="Drag to reorder exercise" style={[s.dragHandle,Platform.OS==='web'&&({touchAction:'none',userSelect:'none'} as any)]} {...responder.panHandlers}><Ionicons name="reorder-three" size={24} color={C.blue}/></View>;
- return <Animated.View onLayout={onLayout} style={[s.card,active&&fs.draggingPanel,{transform:[{translateY}]}]}>{children(handle)}</Animated.View>;
+export function DraggablePanel({
+  index,
+  onMove,
+  onLayout,
+  children,
+}: {
+  index: number;
+  onMove: (from: number, dragY: number) => void;
+  onLayout: (event: LayoutChangeEvent) => void;
+  children: (handle: React.ReactNode) => React.ReactNode;
+}) {
+  const translateY = useRef(new Animated.Value(0)).current;
+  const [active, setActive] = useState(false);
+  const indexRef = useRef(index);
+  const moveRef = useRef(onMove);
+  indexRef.current = index;
+  moveRef.current = onMove;
+  const responder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => setActive(true),
+      onPanResponderMove: (_event, gesture) => translateY.setValue(gesture.dy),
+      onPanResponderTerminationRequest: () => false,
+      onShouldBlockNativeResponder: () => true,
+      onPanResponderRelease: (_event, gesture) => {
+        translateY.setValue(0);
+        setActive(false);
+        moveRef.current(indexRef.current, gesture.dy);
+      },
+      onPanResponderTerminate: (_event, gesture) => {
+        translateY.setValue(0);
+        setActive(false);
+        moveRef.current(indexRef.current, gesture.dy);
+      },
+    }),
+  ).current;
+  const handle = (
+    <View
+      accessibilityLabel="Drag to reorder exercise"
+      style={[
+        s.dragHandle,
+        Platform.OS === 'web' && ({ touchAction: 'none', userSelect: 'none' } as any),
+      ]}
+      {...responder.panHandlers}
+    >
+      <Ionicons name="reorder-three" size={24} color={C.blue} />
+    </View>
+  );
+  return (
+    <Animated.View
+      onLayout={onLayout}
+      style={[s.card, active && fs.draggingPanel, { transform: [{ translateY }] }]}
+    >
+      {children(handle)}
+    </Animated.View>
+  );
 }
 
-export function DatePickerModal({visible,value,onClose,onSelect}:{visible:boolean;value:string;onClose:()=>void;onSelect:(date:string)=>void}) {
- const {data}=useStore();const categoriesByDate=new Map<string,string[]>();data.workouts.forEach(w=>{const categories=categoriesByDate.get(w.date)??[];w.exercises.forEach(e=>{if(!categories.includes(e.category))categories.push(e.category)});categoriesByDate.set(w.date,categories)});
- const [month,setMonth]=useState(value.slice(0,7));useEffect(()=>{if(visible)setMonth(value.slice(0,7))},[visible,value]);const [year,monthNumber]=month.split('-').map(Number);const first=new Date(year!,monthNumber!-1,1);const leading=(first.getDay()+6)%7;const count=new Date(year!,monthNumber!,0).getDate();const cells=Array.from({length:Math.ceil((leading+count)/7)*7},(_,i)=>{const day=i-leading+1;return day>0&&day<=count?day:null});const move=(delta:number)=>{const next=new Date(year!,monthNumber!-1+delta,1);setMonth(`${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}`)};
- return <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}><SafeAreaView style={s.screen}><View style={s.modalHead}><Pressable onPress={onClose}><Text style={s.link}>Cancel</Text></Pressable><Text style={s.modalTitle}>Training date</Text><View style={{width:42}}/></View><View style={s.content}><View style={s.calendar}><View style={s.calendarNav}><Pressable onPress={()=>move(-1)} style={s.calendarArrow}><Ionicons name="chevron-back" size={22} color={C.blue}/></Pressable><Text style={s.calendarTitle}>{first.toLocaleDateString('en',{month:'long',year:'numeric'})}</Text><Pressable disabled={month>=today().slice(0,7)} onPress={()=>move(1)} style={s.calendarArrow}><Ionicons name="chevron-forward" size={22} color={month>=today().slice(0,7)?C.line:C.blue}/></Pressable></View><View style={s.calendarGrid}>{['MON','TUE','WED','THU','FRI','SAT','SUN'].map(day=><Text key={day} style={s.weekday}>{day}</Text>)}{cells.map((day,index)=>{const date=day?`${month}-${String(day).padStart(2,'0')}`:'';const disabled=!day||date>today();const active=date===value;const categories=categoriesByDate.get(date)??[];return <Pressable disabled={disabled} key={`${day}-${index}`} onPress={()=>{onSelect(date);onClose()}} style={s.calendarCell}>{day&&<View style={[s.dayCircle,active&&s.daySelected]}><Text style={[s.dayText,disabled&&{color:C.line},active&&s.dayTextSelected]}>{day}</Text>{categories.length>0&&<View style={s.workoutDots}>{categories.slice(0,5).map(category=><View key={category} style={[s.workoutDot,{backgroundColor:colorForCategory(category,data.customCategories)}]}/>)}</View>}</View>}</Pressable>})}</View></View></View></SafeAreaView></Modal>;
+export function DatePickerModal({
+  visible,
+  value,
+  onClose,
+  onSelect,
+}: {
+  visible: boolean;
+  value: string;
+  onClose: () => void;
+  onSelect: (date: string) => void;
+}) {
+  const { data } = useStore();
+  const categoriesByDate = new Map<string, string[]>();
+  data.workouts.forEach((w) => {
+    const categories = categoriesByDate.get(w.date) ?? [];
+    w.exercises.forEach((e) => {
+      if (!categories.includes(e.category)) categories.push(e.category);
+    });
+    categoriesByDate.set(w.date, categories);
+  });
+  const [month, setMonth] = useState(value.slice(0, 7));
+  useEffect(() => {
+    if (visible) setMonth(value.slice(0, 7));
+  }, [visible, value]);
+  const [year, monthNumber] = month.split('-').map(Number);
+  const first = new Date(year!, monthNumber! - 1, 1);
+  const leading = (first.getDay() + 6) % 7;
+  const count = new Date(year!, monthNumber!, 0).getDate();
+  const cells = Array.from({ length: Math.ceil((leading + count) / 7) * 7 }, (_, i) => {
+    const day = i - leading + 1;
+    return day > 0 && day <= count ? day : null;
+  });
+  const move = (delta: number) => {
+    const next = new Date(year!, monthNumber! - 1 + delta, 1);
+    setMonth(`${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`);
+  };
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+    >
+      <SafeAreaView style={s.screen}>
+        <View style={s.modalHead}>
+          <Pressable onPress={onClose}>
+            <Text style={s.link}>Cancel</Text>
+          </Pressable>
+          <Text style={s.modalTitle}>Training date</Text>
+          <View style={{ width: 42 }} />
+        </View>
+        <View style={s.content}>
+          <View style={s.calendar}>
+            <View style={s.calendarNav}>
+              <Pressable onPress={() => move(-1)} style={s.calendarArrow}>
+                <Ionicons name="chevron-back" size={22} color={C.blue} />
+              </Pressable>
+              <Text style={s.calendarTitle}>
+                {first.toLocaleDateString('en', { month: 'long', year: 'numeric' })}
+              </Text>
+              <Pressable
+                disabled={month >= today().slice(0, 7)}
+                onPress={() => move(1)}
+                style={s.calendarArrow}
+              >
+                <Ionicons
+                  name="chevron-forward"
+                  size={22}
+                  color={month >= today().slice(0, 7) ? C.line : C.blue}
+                />
+              </Pressable>
+            </View>
+            <View style={s.calendarGrid}>
+              {['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map((day) => (
+                <Text key={day} style={s.weekday}>
+                  {day}
+                </Text>
+              ))}
+              {cells.map((day, index) => {
+                const date = day ? `${month}-${String(day).padStart(2, '0')}` : '';
+                const disabled = !day || date > today();
+                const active = date === value;
+                const categories = categoriesByDate.get(date) ?? [];
+                return (
+                  <Pressable
+                    disabled={disabled}
+                    key={`${day}-${index}`}
+                    onPress={() => {
+                      onSelect(date);
+                      onClose();
+                    }}
+                    style={s.calendarCell}
+                  >
+                    {day && (
+                      <View style={[s.dayCircle, active && s.daySelected]}>
+                        <Text
+                          style={[
+                            s.dayText,
+                            disabled && { color: C.line },
+                            active && s.dayTextSelected,
+                          ]}
+                        >
+                          {day}
+                        </Text>
+                        {categories.length > 0 && (
+                          <View style={s.workoutDots}>
+                            {categories.slice(0, 5).map((category) => (
+                              <View
+                                key={category}
+                                style={[
+                                  s.workoutDot,
+                                  {
+                                    backgroundColor: colorForCategory(
+                                      category,
+                                      data.customCategories,
+                                    ),
+                                  },
+                                ]}
+                              />
+                            ))}
+                          </View>
+                        )}
+                      </View>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+      </SafeAreaView>
+    </Modal>
+  );
 }

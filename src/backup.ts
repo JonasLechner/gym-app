@@ -24,5 +24,8 @@ export async function exportBackup(data: AppData, slot?: 'A' | 'B') {
 
   const uri = `${FileSystem.cacheDirectory}${filename}`;
   await FileSystem.writeAsStringAsync(uri, json);
-  await Sharing.shareAsync(uri, { mimeType: 'application/json', dialogTitle: 'Export LiftNotes backup' });
+  await Sharing.shareAsync(uri, {
+    mimeType: 'application/json',
+    dialogTitle: 'Export LiftNotes backup',
+  });
 }

@@ -13,28 +13,53 @@ export const BUILT_IN_CATEGORIES = [
   { name: 'Cardio', color: '#ff69b4' },
 ] as const;
 
-export const CATEGORY_COLORS = ['#5ac8fa','#af8cff','#ffcc4d','#64d98b','#ff7582','#ef7cff','#8d9cff','#e6a15c'];
+export const CATEGORY_COLORS = [
+  '#5ac8fa',
+  '#af8cff',
+  '#ffcc4d',
+  '#64d98b',
+  '#ff7582',
+  '#ef7cff',
+  '#8d9cff',
+  '#e6a15c',
+];
 
-const calves = new Set(['Standing Calf Raise 1','Standing Calf Raise Machine','Leg Press Calfs','Leg Press Calfs 1','Leg Press Calfs Liegend']);
-const forearms = new Set(['Forarm Curl Dumbell Unilat','Forearm Barbell','Straightbar Cable Wristcurl']);
-const translations: Record<string,string> = {
+const calves = new Set([
+  'Standing Calf Raise 1',
+  'Standing Calf Raise Machine',
+  'Leg Press Calfs',
+  'Leg Press Calfs 1',
+  'Leg Press Calfs Liegend',
+]);
+const forearms = new Set([
+  'Forarm Curl Dumbell Unilat',
+  'Forearm Barbell',
+  'Straightbar Cable Wristcurl',
+]);
+const translations: Record<string, string> = {
   // These FitNotes names are intentionally preserved:
   // “Hip Abductor Tritte Innen” and “Hip Abductor Tritte Außen”.
-  'Beinpresse':'Leg Press','Kniebeuge':'Squat','Kreuzheben':'Deadlift',
+  Beinpresse: 'Leg Press',
+  Kniebeuge: 'Squat',
+  Kreuzheben: 'Deadlift',
 };
 
-export const englishExerciseName=(name:string)=>translations[name.trim()]??name.trim();
+export const englishExerciseName = (name: string) => translations[name.trim()] ?? name.trim();
 
 export function canonicalExercise(name: string, category: string) {
   const cleanName = name.trim();
-  if (cleanName.toLowerCase() === 'face pull' || cleanName.toLowerCase() === 'cable face pull') return { name: 'Cable Face Pull', category: 'Shoulders' };
+  if (cleanName.toLowerCase() === 'face pull' || cleanName.toLowerCase() === 'cable face pull')
+    return { name: 'Cable Face Pull', category: 'Shoulders' };
   if (calves.has(cleanName)) return { name: cleanName, category: 'Calves' };
-  if (forearms.has(cleanName) || category.trim().toLowerCase() === 'forearm') return { name: cleanName, category: 'Forearms' };
+  if (forearms.has(cleanName) || category.trim().toLowerCase() === 'forearm')
+    return { name: cleanName, category: 'Forearms' };
   return { name: cleanName, category: category.trim() || 'Uncategorised' };
 }
 
 export function colorForCategory(name: string, custom: CustomCategory[] = []) {
-  return BUILT_IN_CATEGORIES.find(c => c.name.toLowerCase() === name.toLowerCase())?.color
-    ?? custom.find(c => c.name.toLowerCase() === name.toLowerCase())?.color
-    ?? '#9299a7';
+  return (
+    BUILT_IN_CATEGORIES.find((c) => c.name.toLowerCase() === name.toLowerCase())?.color ??
+    custom.find((c) => c.name.toLowerCase() === name.toLowerCase())?.color ??
+    '#9299a7'
+  );
 }
