@@ -19,7 +19,7 @@ const DEFAULT_EXERCISES: [string,string][] = [
 const initial: AppData = { workouts: [], exercises: DEFAULT_EXERCISES.map(([name,category])=>({id:ids(),name,category})), routines: [], customCategories: [], settings: { restSeconds: 120, timerEnabled: true, backupAfterWorkout: true, nextBackupSlot: 'A', exerciseDefaultsVersion:EXERCISE_DEFAULTS_VERSION } };
 export type Store = {
   data: AppData; ready: boolean;
-  saveWorkout: (w: Workout) => void; deleteWorkout: (id: string) => void;
+  saveWorkout: (w: Workout, webSnapshot?: AppData) => void; deleteWorkout: (id: string) => void;
   addExercise: (name: string, category: string) => ExerciseDefinition;
   addCategory: (name: string, color: string) => void;
   deleteExercise: (id: string) => void;
@@ -29,6 +29,30 @@ export type Store = {
   replaceData: (d: AppData) => void;
 };
 const Context = createContext<Store | null>(null);
+
+function withSavedWorkout(data:AppData,workout:Workout):AppData {
+  const workouts=[...data.workouts.filter(saved=>saved.id!==workout.id),workout].sort((a,b)=>b.date.localeCompare(a.date));
+  const definitions=new Map(data.exercises.map(exercise=>[exercise.name.toLowerCase(),exercise]));
+  workout.exercises.forEach(exercise=>{if(!definitions.has(exercise.name.toLowerCase()))definitions.set(exercise.name.toLowerCase(),{id:ids(),name:exercise.name,category:exercise.category})});
+  return {...data,workouts,exercises:[...definitions.values()].sort((a,b)=>a.name.localeCompare(b.name))};
+}
+
+// AsyncStorage's web backend uses this localStorage key. Merge only this workout
+// into the latest stored data so an inactive tab cannot replace unrelated changes.
+export function persistWorkoutOnWeb(data:AppData,workout:Workout):AppData {
+  const stored=window.localStorage.getItem(KEY);
+  const latest:AppData=stored===null?data:JSON.parse(stored);
+  const merged=withSavedWorkout(latest,workout);
+  window.localStorage.setItem(KEY,JSON.stringify(merged));
+  return merged;
+}
+
+export function workoutStoreState(data:AppData,workout:Workout,webSnapshot?:AppData):AppData {
+  if(!webSnapshot)return withSavedWorkout(data,workout);
+  // Preserve a category created in the same event as this workout edit.
+  const categories=data.customCategories.filter(category=>workout.exercises.some(e=>e.category===category.name)&&!webSnapshot.customCategories.some(saved=>saved.name===category.name));
+  return categories.length?{...webSnapshot,customCategories:[...webSnapshot.customCategories,...categories]}:webSnapshot;
+}
 
 function normalize(raw: Partial<AppData>): AppData {
   const workouts=(raw.workouts??[]).map(w=>{const merged=new Map<string,ExerciseEntry>();w.exercises.forEach(e=>{const fixed=canonicalExercise(e.name,e.category);const key=fixed.name.toLowerCase();const found=merged.get(key);if(found)found.sets.push(...e.sets);else merged.set(key,{...e,...fixed,sets:[...e.sets]})});return {...w,exercises:[...merged.values()]}});
@@ -45,12 +69,7 @@ export function StoreProvider({ children }: React.PropsWithChildren) {
   useEffect(() => { if (ready) AsyncStorage.setItem(KEY, JSON.stringify(data)); }, [data, ready]);
   const api = useMemo<Store>(() => ({
     data, ready,
-    saveWorkout: w => setData(d => {
-      const workouts = [...d.workouts.filter(x => x.id !== w.id), w].sort((a,b) => b.date.localeCompare(a.date));
-      const map = new Map(d.exercises.map(x => [x.name.toLowerCase(), x]));
-      w.exercises.forEach(x => { if (!map.has(x.name.toLowerCase())) map.set(x.name.toLowerCase(), { id: ids(), name: x.name, category: x.category }); });
-      return { ...d, workouts, exercises: [...map.values()].sort((a,b) => a.name.localeCompare(b.name)) };
-    }),
+    saveWorkout: (w,webSnapshot) => setData(d => workoutStoreState(d,w,webSnapshot)),
     deleteWorkout: id => setData(d => ({ ...d, workouts: d.workouts.filter(w => w.id !== id) })),
     addExercise: (name, category) => { const fixed=canonicalExercise(englishExerciseName(name),category); const e = { id: ids(), ...fixed }; setData(d => ({ ...d, exercises: [...d.exercises, e].sort((a,b) => a.name.localeCompare(b.name)) })); return e; },
     addCategory: (name,color) => setData(d => d.customCategories.some(c=>c.name.toLowerCase()===name.trim().toLowerCase())?d:{...d,customCategories:[...d.customCategories,{id:ids(),name:name.trim(),color}]}),

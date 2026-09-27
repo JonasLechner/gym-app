@@ -16,9 +16,11 @@ export function parseFitNotesCsv(csv:string):FitNotesRow[]{
 export function importFitNotesRows(current:AppData,rows:FitNotesRow[],newId:()=>string):{data:AppData;summary:ImportSummary}{
   const summary:ImportSummary={workouts:0,sets:0,duplicates:0};
   const workouts=current.workouts.map(workout=>({...workout,exercises:workout.exercises.map(exercise=>({...exercise,sets:[...exercise.sets]}))}));
-  const byDate=new Map(workouts.map(workout=>[workout.date,workout]));
+  // Imported sets are completed; never merge them into (or deduplicate against) provisional draft sets.
+  const completed=workouts.filter(workout=>!workout.draft);
+  const byDate=new Map(completed.map(workout=>[workout.date,workout]));
   const existingCount=new Map<string,number>();
-  workouts.forEach(workout=>workout.exercises.forEach(exercise=>exercise.sets.forEach(set=>{
+  completed.forEach(workout=>workout.exercises.forEach(exercise=>exercise.sets.forEach(set=>{
     const key=`${workout.date}|${exercise.name}|${set.weight}|${set.reps}|${set.comment??''}`;
     existingCount.set(key,(existingCount.get(key)??0)+1);
   })));

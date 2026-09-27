@@ -17,6 +17,7 @@ export type Workout = {
   date: string; // YYYY-MM-DD
   exercises: ExerciseEntry[];
   note?: string;
+  draft?: boolean; // Visible in History, excluded from completed statistics until Finish.
 };
 
 export type ExerciseDefinition = { id: string; name: string; category: string };

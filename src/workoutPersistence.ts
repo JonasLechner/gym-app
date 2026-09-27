@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { exportBackup } from './backup';
 import { useStore } from './store';
-import type { Workout } from './types';
+import type { AppData, Workout } from './types';
 
 export type WorkoutSaveResult = {
   backupSlot?: 'A' | 'B';
@@ -15,20 +15,21 @@ export type WorkoutSaveResult = {
 export function useWorkoutPersistence() {
   const {data,saveWorkout,updateSettings}=useStore();
 
-  return useCallback(async(workout:Workout):Promise<WorkoutSaveResult>=>{
-    saveWorkout(workout);
-    if(!data.settings.backupAfterWorkout)return {};
+  return useCallback(async(workout:Workout,webSnapshot?:AppData):Promise<WorkoutSaveResult>=>{
+    saveWorkout(workout,webSnapshot);
+    const current=webSnapshot??data;
+    if(!current.settings.backupAfterWorkout)return {};
 
-    const backupSlot=data.settings.nextBackupSlot;
+    const backupSlot=current.settings.nextBackupSlot;
     const backedUpAt=new Date().toISOString();
     const settings={
-      ...data.settings,
+      ...current.settings,
       nextBackupSlot:backupSlot==='A'?'B' as const:'A' as const,
       lastBackupAt:backedUpAt,
     };
     const backupData={
-      ...data,
-      workouts:[...data.workouts.filter(saved=>saved.id!==workout.id),workout].sort((a,b)=>b.date.localeCompare(a.date)),
+      ...current,
+      workouts:[...current.workouts.filter(saved=>saved.id!==workout.id),workout].sort((a,b)=>b.date.localeCompare(a.date)),
       settings,
     };
 
