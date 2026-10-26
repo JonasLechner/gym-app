@@ -22,6 +22,7 @@ import type { ExerciseDefinition, ExerciseEntry, SetEntry, Workout } from '../..
 import { Button, confirmAction, Empty, fmt, Header, WeightInput } from '../../ui';
 import { useWorkoutPersistence } from '../../workoutPersistence';
 import { DatePickerModal, ExerciseMoveButtons, ExercisePicker } from './components';
+import { ExerciseHistoryScreen } from '../exercises/ExerciseHistoryScreen';
 import {
   completedCopySources,
   moveExercise,
@@ -384,6 +385,7 @@ export function WorkoutScreen({ onSaved }: { onSaved: () => void }) {
   const entriesRef = useRef(entries);
   const [picker, setPicker] = useState(false);
   const [copyPicker, setCopyPicker] = useState(false);
+  const [historyExercise, setHistoryExercise] = useState<ExerciseDefinition | null>(null);
   const [datePicker, setDatePicker] = useState(false);
   const [timer, setTimer] = useState<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -745,6 +747,17 @@ export function WorkoutScreen({ onSaved }: { onSaved: () => void }) {
                     {prev ? `  ·  Last ${prettyDate(prevDate ?? date)}` : ''}
                   </Text>
                 </View>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`View history for ${e.name}`}
+                  onPress={() => {
+                    flushDraft();
+                    setHistoryExercise(e);
+                  }}
+                  style={({ pressed }) => [fs.historyButton, pressed && { opacity: 0.55 }]}
+                >
+                  <Ionicons name="time-outline" size={21} color={C.blue} />
+                </Pressable>
                 <Pressable onPress={() => removeEntry(e.id)}>
                   <Ionicons name="trash-outline" size={20} color={C.red} />
                 </Pressable>
@@ -865,6 +878,22 @@ export function WorkoutScreen({ onSaved }: { onSaved: () => void }) {
         onClose={() => setDatePicker(false)}
         onSelect={selectTrainingDate}
       />
+      <Modal
+        visible={historyExercise !== null}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setHistoryExercise(null)}
+      >
+        <SafeAreaView style={s.screen}>
+          {historyExercise && (
+            <ExerciseHistoryScreen
+              exercise={historyExercise}
+              backLabel="Workout"
+              onBack={() => setHistoryExercise(null)}
+            />
+          )}
+        </SafeAreaView>
+      </Modal>
     </View>
   );
 }

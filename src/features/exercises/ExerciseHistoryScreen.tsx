@@ -13,9 +13,11 @@ import { fs } from './styles';
 export function ExerciseHistoryScreen({
   exercise,
   onBack,
+  backLabel = 'Exercises',
 }: {
   exercise: ExerciseDefinition;
   onBack: () => void;
+  backLabel?: string;
 }) {
   const { data } = useStore();
   const days = useMemo(
@@ -74,11 +76,11 @@ export function ExerciseHistoryScreen({
           <Pressable
             onPress={onBack}
             accessibilityRole="button"
-            accessibilityLabel="Back to exercises"
+            accessibilityLabel={`Back to ${backLabel.toLowerCase()}`}
             style={fs.historyBack}
           >
             <Ionicons name="chevron-back" size={20} color={C.blue} />
-            <Text style={s.link}>Exercises</Text>
+            <Text style={s.link}>{backLabel}</Text>
           </Pressable>
           <Text style={s.overline}>{exercise.category.toUpperCase()} / EXERCISE HISTORY</Text>
           <Text style={fs.historyTitle}>{exercise.name}</Text>
