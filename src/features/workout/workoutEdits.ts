@@ -1,5 +1,9 @@
 import type { ExerciseEntry, Workout } from '../../types';
 
+export function weightStepForExercise(name: string): number {
+  return /dumbbell|dumbell|kurzhantel|\bdb\b|\bkh\b/i.test(name) ? 2 : 2.5;
+}
+
 export function moveExercise<T extends { id: string }>(
   exercises: T[],
   id: string,
