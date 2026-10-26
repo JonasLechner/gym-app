@@ -1,5 +1,18 @@
 import type { ExerciseEntry, Workout } from '../../types';
 
+export function moveExercise<T extends { id: string }>(
+  exercises: T[],
+  id: string,
+  direction: -1 | 1,
+): T[] {
+  const from = exercises.findIndex((exercise) => exercise.id === id);
+  const to = from + direction;
+  if (from < 0 || to < 0 || to >= exercises.length) return exercises;
+  const next = [...exercises];
+  [next[from], next[to]] = [next[to]!, next[from]!];
+  return next;
+}
+
 export function completedCopySources(workouts: Workout[], targetDate: string): Workout[] {
   return workouts.filter((w) => !w.draft && w.date < targetDate);
 }

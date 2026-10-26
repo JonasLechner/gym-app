@@ -1,12 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
-  Animated,
-  type LayoutChangeEvent,
   Modal,
-  PanResponder,
-  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -221,62 +217,45 @@ export function ExercisePicker({
   );
 }
 
-export function DraggablePanel({
+export function ExerciseMoveButtons({
+  name,
   index,
+  count,
   onMove,
-  onLayout,
-  children,
 }: {
+  name: string;
   index: number;
-  onMove: (from: number, dragY: number) => void;
-  onLayout: (event: LayoutChangeEvent) => void;
-  children: (handle: React.ReactNode) => React.ReactNode;
+  count: number;
+  onMove: (direction: -1 | 1) => void;
 }) {
-  const translateY = useRef(new Animated.Value(0)).current;
-  const [active, setActive] = useState(false);
-  const indexRef = useRef(index);
-  const moveRef = useRef(onMove);
-  indexRef.current = index;
-  moveRef.current = onMove;
-  const responder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => setActive(true),
-      onPanResponderMove: (_event, gesture) => translateY.setValue(gesture.dy),
-      onPanResponderTerminationRequest: () => false,
-      onShouldBlockNativeResponder: () => true,
-      onPanResponderRelease: (_event, gesture) => {
-        translateY.setValue(0);
-        setActive(false);
-        moveRef.current(indexRef.current, gesture.dy);
-      },
-      onPanResponderTerminate: (_event, gesture) => {
-        translateY.setValue(0);
-        setActive(false);
-        moveRef.current(indexRef.current, gesture.dy);
-      },
-    }),
-  ).current;
-  const handle = (
-    <View
-      accessibilityLabel="Drag to reorder exercise"
-      style={[
-        s.dragHandle,
-        Platform.OS === 'web' && ({ touchAction: 'none', userSelect: 'none' } as any),
-      ]}
-      {...responder.panHandlers}
-    >
-      <Ionicons name="reorder-three" size={24} color={C.blue} />
-    </View>
-  );
   return (
-    <Animated.View
-      onLayout={onLayout}
-      style={[s.card, active && fs.draggingPanel, { transform: [{ translateY }] }]}
-    >
-      {children(handle)}
-    </Animated.View>
+    <View style={fs.moveButtons}>
+      {([-1, 1] as const).map((direction) => {
+        const disabled = direction === -1 ? index === 0 : index === count - 1;
+        const label = direction === -1 ? 'up' : 'down';
+        return (
+          <Pressable
+            key={direction}
+            accessibilityRole="button"
+            accessibilityLabel={`Move ${name} ${label}`}
+            accessibilityState={{ disabled }}
+            disabled={disabled}
+            onPress={() => onMove(direction)}
+            style={({ pressed }) => [
+              fs.moveButton,
+              direction === -1 && fs.moveButtonTop,
+              pressed && !disabled && fs.moveButtonPressed,
+            ]}
+          >
+            <Ionicons
+              name={direction === -1 ? 'arrow-up' : 'arrow-down'}
+              size={18}
+              color={disabled ? C.muted : C.blue}
+            />
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }
 

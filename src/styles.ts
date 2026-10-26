@@ -60,7 +60,6 @@ export const s = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  dragHandle: { width: 30, minHeight: 36, alignItems: 'center', justifyContent: 'center' },
   cardTitle: { fontSize: 17, fontWeight: '800', color: C.text },
   rowSub: { fontSize: 12, color: C.muted, marginTop: 3, lineHeight: 17 },
   setRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginVertical: 4 },

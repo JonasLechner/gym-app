@@ -1,8 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
-  Dimensions,
   Modal,
   Pressable,
   SafeAreaView,
@@ -11,10 +10,6 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import {
-  NestableDraggableFlatList,
-  NestableScrollContainer,
-} from 'react-native-draggable-flatlist';
 import { BUILT_IN_CATEGORIES, colorForCategory } from '../../categories';
 import {
   calculateHistoryMetrics,
@@ -28,10 +23,8 @@ import { C } from '../../theme';
 import type { ExerciseDefinition, SetEntry, Workout } from '../../types';
 import { Button, confirmAction, fmt, Header, WeightInput } from '../../ui';
 import { useWorkoutPersistence } from '../../workoutPersistence';
-import { DatePickerModal, DraggablePanel, ExercisePicker } from '../workout/components';
-import { previousCompletedWorkout } from '../workout/workoutEdits';
-
-const DRAG_HIT_SLOP = { right: -Math.max(0, Dimensions.get('window').width - 82) };
+import { DatePickerModal, ExerciseMoveButtons, ExercisePicker } from '../workout/components';
+import { moveExercise, previousCompletedWorkout } from '../workout/workoutEdits';
 
 function HistoryEditModal({ workout, onClose }: { workout: Workout | null; onClose: () => void }) {
   const { data, saveWorkout } = useStore();
@@ -39,7 +32,6 @@ function HistoryEditModal({ workout, onClose }: { workout: Workout | null; onClo
   const [draft, setDraft] = useState<Workout | null>(null);
   const [exercisePicker, setExercisePicker] = useState(false);
   const [datePicker, setDatePicker] = useState(false);
-  const layouts = useRef(new Map<number, { y: number; height: number }>());
   useEffect(() => {
     setDraft(
       workout
@@ -98,29 +90,12 @@ function HistoryEditModal({ workout, onClose }: { workout: Workout | null; onClo
           ),
         },
     );
-  const moveExercise = (from: number, dragY: number) => {
-    if (Math.abs(dragY) < 12) return;
+  const moveDraftExercise = (id: string, direction: -1 | 1) =>
     setDraft((w) => {
       if (!w) return w;
-      const origin = layouts.current.get(from);
-      if (!origin) return w;
-      const center = origin.y + origin.height / 2 + dragY;
-      let to = from,
-        nearest = Infinity;
-      layouts.current.forEach((layout, index) => {
-        const distance = Math.abs(layout.y + layout.height / 2 - center);
-        if (distance < nearest) {
-          nearest = distance;
-          to = index;
-        }
-      });
-      if (to === from) return w;
-      const exercises = [...w.exercises];
-      const [moved] = exercises.splice(from, 1);
-      exercises.splice(to, 0, moved!);
-      return { ...w, exercises };
+      const exercises = moveExercise(w.exercises, id, direction);
+      return exercises === w.exercises ? w : { ...w, exercises };
     });
-  };
   const addExercise = (definition: ExerciseDefinition) =>
     setDraft((w) => {
       if (!w || w.exercises.some((e) => e.name === definition.name)) return w;
@@ -179,72 +154,63 @@ function HistoryEditModal({ workout, onClose }: { workout: Workout | null; onClo
             placeholderTextColor={C.muted}
           />
           {draft.exercises.map((e, ei) => (
-            <DraggablePanel
-              key={e.id}
-              index={ei}
-              onMove={moveExercise}
-              onLayout={(event) =>
-                layouts.current.set(ei, {
-                  y: event.nativeEvent.layout.y,
-                  height: event.nativeEvent.layout.height,
-                })
-              }
-            >
-              {(handle) => (
-                <>
-                  <View style={s.cardHead}>
-                    {handle}
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.cardTitle}>{e.name}</Text>
-                      <Text style={s.rowSub}>{e.category}</Text>
-                    </View>
-                    <Pressable
-                      onPress={() =>
-                        setDraft(
-                          (w) => w && { ...w, exercises: w.exercises.filter((_, i) => i !== ei) },
-                        )
-                      }
-                    >
-                      <Ionicons name="trash-outline" size={20} color={C.red} />
+            <View key={e.id} style={s.card}>
+              <View style={s.cardHead}>
+                <ExerciseMoveButtons
+                  name={e.name}
+                  index={ei}
+                  count={draft.exercises.length}
+                  onMove={(direction) => moveDraftExercise(e.id, direction)}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={s.cardTitle}>{e.name}</Text>
+                  <Text style={s.rowSub}>{e.category}</Text>
+                </View>
+                <Pressable
+                  onPress={() =>
+                    setDraft(
+                      (w) => w && { ...w, exercises: w.exercises.filter((_, i) => i !== ei) },
+                    )
+                  }
+                >
+                  <Ionicons name="trash-outline" size={20} color={C.red} />
+                </Pressable>
+              </View>
+              {e.sets.map((set, si) => (
+                <View key={set.id} style={fs.editSetBlock}>
+                  <View style={s.setRow}>
+                    <Text style={s.setNo}>{si + 1}</Text>
+                    <WeightInput
+                      value={set.weight}
+                      onChange={(weight) => updateSet(ei, si, { weight })}
+                      style={s.setInput}
+                    />
+                    <Text style={s.unitLabel}>KG</Text>
+                    <TextInput
+                      keyboardType="number-pad"
+                      value={String(set.reps)}
+                      onChangeText={(v) => updateSet(ei, si, { reps: Number(v) || 0 })}
+                      style={s.setInput}
+                    />
+                    <Text style={s.unitLabel}>REPS</Text>
+                    <Pressable onPress={() => removeSet(ei, si)}>
+                      <Ionicons name="trash-outline" size={18} color={C.muted} />
                     </Pressable>
                   </View>
-                  {e.sets.map((set, si) => (
-                    <View key={set.id} style={fs.editSetBlock}>
-                      <View style={s.setRow}>
-                        <Text style={s.setNo}>{si + 1}</Text>
-                        <WeightInput
-                          value={set.weight}
-                          onChange={(weight) => updateSet(ei, si, { weight })}
-                          style={s.setInput}
-                        />
-                        <Text style={s.unitLabel}>KG</Text>
-                        <TextInput
-                          keyboardType="number-pad"
-                          value={String(set.reps)}
-                          onChangeText={(v) => updateSet(ei, si, { reps: Number(v) || 0 })}
-                          style={s.setInput}
-                        />
-                        <Text style={s.unitLabel}>REPS</Text>
-                        <Pressable onPress={() => removeSet(ei, si)}>
-                          <Ionicons name="trash-outline" size={18} color={C.muted} />
-                        </Pressable>
-                      </View>
-                      <TextInput
-                        value={set.comment ?? ''}
-                        onChangeText={(comment) => updateSet(ei, si, { comment })}
-                        style={fs.commentInput}
-                        placeholder="Set comment"
-                        placeholderTextColor={C.muted}
-                      />
-                    </View>
-                  ))}
-                  <Pressable style={s.addSet} onPress={() => addSet(ei)}>
-                    <Ionicons name="add" size={18} color={C.blue} />
-                    <Text style={s.addSetText}>ADD SET</Text>
-                  </Pressable>
-                </>
-              )}
-            </DraggablePanel>
+                  <TextInput
+                    value={set.comment ?? ''}
+                    onChangeText={(comment) => updateSet(ei, si, { comment })}
+                    style={fs.commentInput}
+                    placeholder="Set comment"
+                    placeholderTextColor={C.muted}
+                  />
+                </View>
+              ))}
+              <Pressable style={s.addSet} onPress={() => addSet(ei)}>
+                <Ionicons name="add" size={18} color={C.blue} />
+                <Text style={s.addSetText}>ADD SET</Text>
+              </Pressable>
+            </View>
           ))}
           <Button
             kind="ghost"
@@ -312,7 +278,7 @@ export function HistoryScreen() {
   const monthLabel = firstDay.toLocaleDateString('en', { month: 'long', year: 'numeric' });
   return (
     <>
-      <NestableScrollContainer contentContainerStyle={s.content}>
+      <ScrollView contentContainerStyle={s.content}>
         <Header title="History" />
         <View style={fs.metricRow}>
           <Metric value={String(workoutCount)} label="WORKOUTS" />
@@ -453,29 +419,27 @@ export function HistoryScreen() {
                 </Pressable>
                 {open === w.id && (
                   <View style={fs.detail}>
-                    <NestableDraggableFlatList
-                      activationDistance={12}
-                      dragHitSlop={DRAG_HIT_SLOP}
-                      data={w.exercises}
-                      keyExtractor={(e) => e.id}
-                      scrollEnabled={false}
-                      onDragEnd={({ data: ordered }) => saveWorkout({ ...w, exercises: ordered })}
-                      renderItem={({ item: e, drag, isActive }) => (
-                        <View style={[fs.historyExercise, isActive && fs.draggingCard]}>
-                          <View style={fs.dragHistoryRow}>
-                            <Pressable onPressIn={drag} style={s.dragHandle}>
-                              <Ionicons name="reorder-three" size={22} color={C.blue} />
-                            </Pressable>
-                            <View style={{ flex: 1 }}>
-                              <Text style={s.rowTitle}>{e.name}</Text>
-                              <Text style={s.rowSub}>
-                                {e.sets.map((x) => `${fmt(x.weight)} kg × ${x.reps}`).join('  ·  ')}
-                              </Text>
-                            </View>
+                    {w.exercises.map((e, index) => (
+                      <View key={e.id} style={fs.historyExercise}>
+                        <View style={fs.historyExerciseRow}>
+                          <ExerciseMoveButtons
+                            name={e.name}
+                            index={index}
+                            count={w.exercises.length}
+                            onMove={(direction) => {
+                              const exercises = moveExercise(w.exercises, e.id, direction);
+                              if (exercises !== w.exercises) saveWorkout({ ...w, exercises });
+                            }}
+                          />
+                          <View style={{ flex: 1 }}>
+                            <Text style={s.rowTitle}>{e.name}</Text>
+                            <Text style={s.rowSub}>
+                              {e.sets.map((x) => `${fmt(x.weight)} kg × ${x.reps}`).join('  ·  ')}
+                            </Text>
                           </View>
                         </View>
-                      )}
-                    />
+                      </View>
+                    ))}
                     <Button
                       kind="ghost"
                       label="Edit workout"
@@ -503,7 +467,7 @@ export function HistoryScreen() {
             <Text style={s.rowSub}>No workout on {prettyDate(selected)}</Text>
           </View>
         )}
-      </NestableScrollContainer>
+      </ScrollView>
       <HistoryEditModal workout={editWorkout} onClose={() => setEditWorkout(null)} />
     </>
   );

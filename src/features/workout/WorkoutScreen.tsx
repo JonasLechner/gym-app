@@ -21,9 +21,10 @@ import { C } from '../../theme';
 import type { ExerciseDefinition, ExerciseEntry, SetEntry, Workout } from '../../types';
 import { Button, confirmAction, Empty, fmt, Header, WeightInput } from '../../ui';
 import { useWorkoutPersistence } from '../../workoutPersistence';
-import { DatePickerModal, DraggablePanel, ExercisePicker } from './components';
+import { DatePickerModal, ExerciseMoveButtons, ExercisePicker } from './components';
 import {
   completedCopySources,
+  moveExercise,
   previousCompletedWorkout,
   removesLastSetFromCompletedWorkout,
 } from './workoutEdits';
@@ -40,7 +41,6 @@ function CopyWorkoutModal({
   onCopy: (entries: ExerciseEntry[]) => void;
 }) {
   const { data } = useStore();
-  const previewLayouts = useRef(new Map<number, { y: number; height: number }>());
   const eligible = completedCopySources(data.workouts, targetDate);
   const latest = eligible[0]?.date ?? targetDate;
   const [month, setMonth] = useState(latest.slice(0, 7));
@@ -101,28 +101,8 @@ function CopyWorkoutModal({
           : e,
       ),
     );
-  const movePreview = (from: number, dragY: number) => {
-    if (Math.abs(dragY) < 12) return;
-    setPreview((items) => {
-      const origin = previewLayouts.current.get(from);
-      if (!origin) return items;
-      const draggedCenter = origin.y + origin.height / 2 + dragY;
-      let to = from;
-      let nearest = Infinity;
-      previewLayouts.current.forEach((layout, index) => {
-        const distance = Math.abs(layout.y + layout.height / 2 - draggedCenter);
-        if (distance < nearest) {
-          nearest = distance;
-          to = index;
-        }
-      });
-      if (to === from) return items;
-      const next = [...items];
-      const [moved] = next.splice(from, 1);
-      next.splice(to, 0, moved!);
-      return next;
-    });
-  };
+  const movePreview = (id: string, direction: -1 | 1) =>
+    setPreview((items) => moveExercise(items, id, direction));
   const workoutsForDay = selectedDay ? (byDate.get(selectedDay) ?? []) : [];
   const title = addingExercise
     ? 'Add exercise'
@@ -204,55 +184,46 @@ function CopyWorkoutModal({
               </Text>
             </View>
             {preview.map((e, ei) => (
-              <DraggablePanel
-                key={e.id}
-                index={ei}
-                onMove={movePreview}
-                onLayout={(event) =>
-                  previewLayouts.current.set(ei, {
-                    y: event.nativeEvent.layout.y,
-                    height: event.nativeEvent.layout.height,
-                  })
-                }
-              >
-                {(handle) => (
-                  <>
-                    <View style={s.cardHead}>
-                      {handle}
-                      <View style={{ flex: 1 }}>
-                        <Text style={s.cardTitle}>{e.name}</Text>
-                        <Text style={s.rowSub}>{e.category}</Text>
-                      </View>
-                      <Pressable onPress={() => setPreview((p) => p.filter((_, i) => i !== ei))}>
-                        <Ionicons name="trash-outline" size={20} color={C.red} />
-                      </Pressable>
-                    </View>
-                    {e.sets.map((set, si) => (
-                      <View style={fs.copySet} key={set.id}>
-                        <Text style={s.setNo}>{si + 1}</Text>
-                        <Text style={[s.rowTitle, { flex: 1 }]}>
-                          {fmt(set.weight)} kg × {set.reps}
-                        </Text>
-                        <Pressable
-                          onPress={() =>
-                            setPreview((p) =>
-                              p.map((x, i) =>
-                                i === ei ? { ...x, sets: x.sets.filter((_, j) => j !== si) } : x,
-                              ),
-                            )
-                          }
-                        >
-                          <Ionicons name="trash-outline" size={18} color={C.muted} />
-                        </Pressable>
-                      </View>
-                    ))}
-                    <Pressable style={s.addSet} onPress={() => addSet(ei)}>
-                      <Ionicons name="add" size={18} color={C.blue} />
-                      <Text style={s.addSetText}>ADD SET</Text>
+              <View key={e.id} style={s.card}>
+                <View style={s.cardHead}>
+                  <ExerciseMoveButtons
+                    name={e.name}
+                    index={ei}
+                    count={preview.length}
+                    onMove={(direction) => movePreview(e.id, direction)}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.cardTitle}>{e.name}</Text>
+                    <Text style={s.rowSub}>{e.category}</Text>
+                  </View>
+                  <Pressable onPress={() => setPreview((p) => p.filter((_, i) => i !== ei))}>
+                    <Ionicons name="trash-outline" size={20} color={C.red} />
+                  </Pressable>
+                </View>
+                {e.sets.map((set, si) => (
+                  <View style={fs.copySet} key={set.id}>
+                    <Text style={s.setNo}>{si + 1}</Text>
+                    <Text style={[s.rowTitle, { flex: 1 }]}>
+                      {fmt(set.weight)} kg × {set.reps}
+                    </Text>
+                    <Pressable
+                      onPress={() =>
+                        setPreview((p) =>
+                          p.map((x, i) =>
+                            i === ei ? { ...x, sets: x.sets.filter((_, j) => j !== si) } : x,
+                          ),
+                        )
+                      }
+                    >
+                      <Ionicons name="trash-outline" size={18} color={C.muted} />
                     </Pressable>
-                  </>
-                )}
-              </DraggablePanel>
+                  </View>
+                ))}
+                <Pressable style={s.addSet} onPress={() => addSet(ei)}>
+                  <Ionicons name="add" size={18} color={C.blue} />
+                  <Text style={s.addSetText}>ADD SET</Text>
+                </Pressable>
+              </View>
             ))}
             <Button
               kind="ghost"
@@ -382,7 +353,6 @@ function CopyWorkoutModal({
 export function WorkoutScreen({ onSaved }: { onSaved: () => void }) {
   const { data, saveWorkout, deleteWorkout } = useStore();
   const persistWorkout = useWorkoutPersistence();
-  const activeLayouts = useRef(new Map<number, { y: number; height: number }>());
   const initialWorkout = data.workouts.find((w) => w.date === today());
   const [date, setDate] = useState(today());
   const dateRef = useRef(date);
@@ -561,28 +531,8 @@ export function WorkoutScreen({ onSaved }: { onSaved: () => void }) {
           );
       },
     );
-  const moveEntry = (from: number, dragY: number) => {
-    if (Math.abs(dragY) < 12) return;
-    changeEntries((items) => {
-      const origin = activeLayouts.current.get(from);
-      if (!origin) return items;
-      const center = origin.y + origin.height / 2 + dragY;
-      let to = from,
-        nearest = Infinity;
-      activeLayouts.current.forEach((layout, index) => {
-        const distance = Math.abs(layout.y + layout.height / 2 - center);
-        if (distance < nearest) {
-          nearest = distance;
-          to = index;
-        }
-      });
-      if (to === from) return items;
-      const next = [...items];
-      const [moved] = next.splice(from, 1);
-      next.splice(to, 0, moved!);
-      return next;
-    });
-  };
+  const moveEntry = (id: string, direction: -1 | 1) =>
+    changeEntries((items) => moveExercise(items, id, direction));
   const selectTrainingDate = (nextDate: string) => {
     flushDraft();
     if (nextDate === dateRef.current) return;
@@ -753,107 +703,98 @@ export function WorkoutScreen({ onSaved }: { onSaved: () => void }) {
             ? data.workouts.find((w) => w.exercises.includes(prev))?.date
             : undefined;
           return (
-            <DraggablePanel
-              key={e.id}
-              index={ei}
-              onMove={moveEntry}
-              onLayout={(event) =>
-                activeLayouts.current.set(ei, {
-                  y: event.nativeEvent.layout.y,
-                  height: event.nativeEvent.layout.height,
-                })
-              }
-            >
-              {(handle) => (
-                <>
-                  <View style={s.cardHead}>
-                    {handle}
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.cardTitle}>{e.name}</Text>
-                      <Text style={s.rowSub}>
-                        {e.category}
-                        {prev ? `  ·  Last ${prettyDate(prevDate ?? date)}` : ''}
+            <View key={e.id} style={s.card}>
+              <View style={s.cardHead}>
+                <ExerciseMoveButtons
+                  name={e.name}
+                  index={ei}
+                  count={entries.length}
+                  onMove={(direction) => moveEntry(e.id, direction)}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={s.cardTitle}>{e.name}</Text>
+                  <Text style={s.rowSub}>
+                    {e.category}
+                    {prev ? `  ·  Last ${prettyDate(prevDate ?? date)}` : ''}
+                  </Text>
+                </View>
+                <Pressable onPress={() => removeEntry(e.id)}>
+                  <Ionicons name="trash-outline" size={20} color={C.red} />
+                </Pressable>
+              </View>
+              <View style={fs.setHeader}>
+                <Text style={[fs.setLabel, { width: 32 }]}>SET</Text>
+                <Text style={fs.setLabel}>PREVIOUS</Text>
+                <Text style={fs.setLabel}>KG</Text>
+                <Text style={fs.setLabel}>REPS</Text>
+                <View style={{ width: 26 }} />
+              </View>
+              {e.sets.map((set, si) => {
+                const projected = projectedOneRepMax(set.weight, set.reps);
+                return (
+                  <View style={fs.workoutSet} key={set.id}>
+                    <View style={s.setRow}>
+                      <Text style={s.setNo}>{si + 1}</Text>
+                      <Text style={fs.previous}>
+                        {prev?.sets[si]
+                          ? `${fmt(prev.sets[si]!.weight)} × ${prev.sets[si]!.reps}`
+                          : '—'}
                       </Text>
+                      <WeightInput
+                        value={set.weight}
+                        onChange={(weight) => changeSet(ei, si, { weight })}
+                        style={s.setInput}
+                      />
+                      <TextInput
+                        keyboardType="number-pad"
+                        selectTextOnFocus
+                        value={String(set.reps)}
+                        onChangeText={(v) => changeSet(ei, si, { reps: Number(v) || 0 })}
+                        style={s.setInput}
+                      />
+                      <Pressable onPress={() => removeSet(e.id, set.id)}>
+                        <Ionicons name="close-circle" size={21} color={C.muted} />
+                      </Pressable>
                     </View>
-                    <Pressable onPress={() => removeEntry(e.id)}>
-                      <Ionicons name="trash-outline" size={20} color={C.red} />
-                    </Pressable>
-                  </View>
-                  <View style={fs.setHeader}>
-                    <Text style={[fs.setLabel, { width: 32 }]}>SET</Text>
-                    <Text style={fs.setLabel}>PREVIOUS</Text>
-                    <Text style={fs.setLabel}>KG</Text>
-                    <Text style={fs.setLabel}>REPS</Text>
-                    <View style={{ width: 26 }} />
-                  </View>
-                  {e.sets.map((set, si) => {
-                    const projected = projectedOneRepMax(set.weight, set.reps);
-                    return (
-                      <View style={fs.workoutSet} key={set.id}>
-                        <View style={s.setRow}>
-                          <Text style={s.setNo}>{si + 1}</Text>
-                          <Text style={fs.previous}>
-                            {prev?.sets[si]
-                              ? `${fmt(prev.sets[si]!.weight)} × ${prev.sets[si]!.reps}`
-                              : '—'}
-                          </Text>
-                          <WeightInput
-                            value={set.weight}
-                            onChange={(weight) => changeSet(ei, si, { weight })}
-                            style={s.setInput}
-                          />
-                          <TextInput
-                            keyboardType="number-pad"
-                            selectTextOnFocus
-                            value={String(set.reps)}
-                            onChangeText={(v) => changeSet(ei, si, { reps: Number(v) || 0 })}
-                            style={s.setInput}
-                          />
-                          <Pressable onPress={() => removeSet(e.id, set.id)}>
-                            <Ionicons name="close-circle" size={21} color={C.muted} />
-                          </Pressable>
-                        </View>
-                        <View style={fs.setProjectionRow}>
-                          <Text style={fs.setProjection}>
-                            {projected !== null
-                              ? `Projected 1RM  ${fmt(projected)} kg`
-                              : 'Projected 1RM  —'}
-                          </Text>
-                          <View style={fs.weightBumps}>
-                            <Pressable
-                              accessibilityLabel="Decrease weight by 2.5 kilograms"
-                              onPress={() =>
-                                changeSet(ei, si, { weight: Math.max(0, set.weight - 2.5) })
-                              }
-                              style={fs.weightBump}
-                            >
-                              <Text style={fs.weightBumpText}>−2.5</Text>
-                            </Pressable>
-                            <Pressable
-                              accessibilityLabel="Increase weight by 2.5 kilograms"
-                              onPress={() => changeSet(ei, si, { weight: set.weight + 2.5 })}
-                              style={fs.weightBump}
-                            >
-                              <Text style={fs.weightBumpText}>+2.5</Text>
-                            </Pressable>
-                          </View>
-                        </View>
+                    <View style={fs.setProjectionRow}>
+                      <Text style={fs.setProjection}>
+                        {projected !== null
+                          ? `Projected 1RM  ${fmt(projected)} kg`
+                          : 'Projected 1RM  —'}
+                      </Text>
+                      <View style={fs.weightBumps}>
+                        <Pressable
+                          accessibilityLabel="Decrease weight by 2.5 kilograms"
+                          onPress={() =>
+                            changeSet(ei, si, { weight: Math.max(0, set.weight - 2.5) })
+                          }
+                          style={fs.weightBump}
+                        >
+                          <Text style={fs.weightBumpText}>−2.5</Text>
+                        </Pressable>
+                        <Pressable
+                          accessibilityLabel="Increase weight by 2.5 kilograms"
+                          onPress={() => changeSet(ei, si, { weight: set.weight + 2.5 })}
+                          style={fs.weightBump}
+                        >
+                          <Text style={fs.weightBumpText}>+2.5</Text>
+                        </Pressable>
                       </View>
-                    );
-                  })}
-                  <Pressable
-                    style={s.addSet}
-                    onPress={() => {
-                      addSet(ei);
-                      startTimer();
-                    }}
-                  >
-                    <Ionicons name="add" size={18} color={C.blue} />
-                    <Text style={s.addSetText}>ADD SET</Text>
-                  </Pressable>
-                </>
-              )}
-            </DraggablePanel>
+                    </View>
+                  </View>
+                );
+              })}
+              <Pressable
+                style={s.addSet}
+                onPress={() => {
+                  addSet(ei);
+                  startTimer();
+                }}
+              >
+                <Ionicons name="add" size={18} color={C.blue} />
+                <Text style={s.addSetText}>ADD SET</Text>
+              </Pressable>
+            </View>
           );
         })}
         <Button label="Add exercise" icon="add" onPress={() => setPicker(true)} />

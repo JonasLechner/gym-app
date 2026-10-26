@@ -2,8 +2,7 @@ import { StyleSheet } from 'react-native';
 import { C, radius } from '../../theme';
 
 export const fs = StyleSheet.create({
-  draggingCard: { opacity: 0.75, borderColor: C.blue, backgroundColor: C.raised },
-  dragHistoryRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  historyExerciseRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   historyFilters: { gap: 7, paddingBottom: 16 },
   noteInput: { minHeight: 76, paddingTop: 12, textAlignVertical: 'top' },
   editSetBlock: {
