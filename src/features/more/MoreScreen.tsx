@@ -19,7 +19,7 @@ import { s } from '../../styles';
 import { fs } from './styles';
 import { C } from '../../theme';
 import type { Routine } from '../../types';
-import { fmt, Header, WeightInput } from '../../ui';
+import { confirmAction, fmt, Header, WeightInput } from '../../ui';
 
 function PlateLoadCard({ title, load }: { title: string; load: PlateLoad }) {
   return (
@@ -237,7 +237,13 @@ export function MoreScreen() {
           {data.routines.map((r) => (
             <View style={fs.setting} key={r.id}>
               <Text style={s.rowTitle}>{r.name}</Text>
-              <Pressable onPress={() => setRoutines(data.routines.filter((x) => x.id !== r.id))}>
+              <Pressable
+                onPress={() =>
+                  confirmAction('Delete routine?', `${r.name} will be permanently deleted.`, () =>
+                    setRoutines(data.routines.filter((x) => x.id !== r.id)),
+                  )
+                }
+              >
                 <Ionicons name="trash-outline" size={19} color={C.red} />
               </Pressable>
             </View>

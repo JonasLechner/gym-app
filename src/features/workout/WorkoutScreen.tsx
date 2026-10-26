@@ -197,7 +197,15 @@ function CopyWorkoutModal({
                     <Text style={s.cardTitle}>{e.name}</Text>
                     <Text style={s.rowSub}>{e.category}</Text>
                   </View>
-                  <Pressable onPress={() => setPreview((p) => p.filter((_, i) => i !== ei))}>
+                  <Pressable
+                    onPress={() =>
+                      confirmAction(
+                        'Remove exercise from preview?',
+                        `${e.name} and its sets will be removed from this copy preview. The original workout will not change.`,
+                        () => setPreview((p) => p.filter((item) => item.id !== e.id)),
+                      )
+                    }
+                  >
                     <Ionicons name="trash-outline" size={20} color={C.red} />
                   </Pressable>
                 </View>
@@ -209,10 +217,17 @@ function CopyWorkoutModal({
                     </Text>
                     <Pressable
                       onPress={() =>
-                        setPreview((p) =>
-                          p.map((x, i) =>
-                            i === ei ? { ...x, sets: x.sets.filter((_, j) => j !== si) } : x,
-                          ),
+                        confirmAction(
+                          'Remove set from preview?',
+                          'This set will be removed from the copy preview. The original workout will not change.',
+                          () =>
+                            setPreview((p) =>
+                              p.map((item) =>
+                                item.id === e.id
+                                  ? { ...item, sets: item.sets.filter((s) => s.id !== set.id) }
+                                  : item,
+                              ),
+                            ),
                         )
                       }
                     >
@@ -514,12 +529,7 @@ export function WorkoutScreen({ onSaved }: { onSaved: () => void }) {
         };
       }),
     );
-  const confirmCompletedRemoval = (title: string, message: string, remove: () => void) => {
-    const existing = data.workouts.find((w) => w.id === workoutIdRef.current);
-    if (!existing || existing.draft) {
-      remove();
-      return;
-    }
+  const confirmRemoval = (title: string, message: string, remove: () => void) => {
     const id = workoutIdRef.current,
       selectedDate = dateRef.current;
     confirmAction(title, message, () => {
@@ -528,29 +538,25 @@ export function WorkoutScreen({ onSaved }: { onSaved: () => void }) {
     });
   };
   const removeEntry = (entryId: string) =>
-    confirmCompletedRemoval(
+    confirmRemoval(
       'Remove exercise?',
-      'This exercise and its sets will be removed from the saved workout immediately.',
+      'This exercise and its sets will be removed from this workout immediately.',
       () => {
         if (entriesRef.current.some((e) => e.id === entryId))
           changeEntries((es) => es.filter((e) => e.id !== entryId));
       },
     );
   const removeSet = (entryId: string, setId: string) =>
-    confirmCompletedRemoval(
-      'Remove set?',
-      'This set will be removed from the saved workout immediately.',
-      () => {
-        if (
-          entriesRef.current.some((e) => e.id === entryId && e.sets.some((set) => set.id === setId))
-        )
-          changeEntries((es) =>
-            es.map((e) =>
-              e.id === entryId ? { ...e, sets: e.sets.filter((set) => set.id !== setId) } : e,
-            ),
-          );
-      },
-    );
+    confirmRemoval('Remove set?', 'This set will be removed from this workout immediately.', () => {
+      if (
+        entriesRef.current.some((e) => e.id === entryId && e.sets.some((set) => set.id === setId))
+      )
+        changeEntries((es) =>
+          es.map((e) =>
+            e.id === entryId ? { ...e, sets: e.sets.filter((set) => set.id !== setId) } : e,
+          ),
+        );
+    });
   const moveEntry = (id: string, direction: -1 | 1) =>
     changeEntries((items) => moveExercise(items, id, direction));
   const selectTrainingDate = (nextDate: string) => {

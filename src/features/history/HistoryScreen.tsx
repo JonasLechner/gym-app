@@ -80,15 +80,18 @@ function HistoryEditModal({ workout, onClose }: { workout: Workout | null; onClo
           ),
         },
     );
-  const removeSet = (ei: number, si: number) =>
-    setDraft(
-      (w) =>
-        w && {
-          ...w,
-          exercises: w.exercises.map((e, i) =>
-            i === ei ? { ...e, sets: e.sets.filter((_, j) => j !== si) } : e,
-          ),
-        },
+  const removeSet = (exerciseId: string, setId: string) =>
+    confirmAction('Remove set?', 'This set will be removed when you save the workout.', () =>
+      setDraft((w) =>
+        w && w.id === draft.id
+          ? {
+              ...w,
+              exercises: w.exercises.map((e) =>
+                e.id === exerciseId ? { ...e, sets: e.sets.filter((set) => set.id !== setId) } : e,
+              ),
+            }
+          : w,
+      ),
     );
   const moveDraftExercise = (id: string, direction: -1 | 1) =>
     setDraft((w) => {
@@ -168,8 +171,15 @@ function HistoryEditModal({ workout, onClose }: { workout: Workout | null; onClo
                 </View>
                 <Pressable
                   onPress={() =>
-                    setDraft(
-                      (w) => w && { ...w, exercises: w.exercises.filter((_, i) => i !== ei) },
+                    confirmAction(
+                      'Remove exercise?',
+                      `${e.name} and its sets will be removed when you save the workout.`,
+                      () =>
+                        setDraft((w) =>
+                          w && w.id === draft.id
+                            ? { ...w, exercises: w.exercises.filter((item) => item.id !== e.id) }
+                            : w,
+                        ),
                     )
                   }
                 >
@@ -193,7 +203,7 @@ function HistoryEditModal({ workout, onClose }: { workout: Workout | null; onClo
                       style={s.setInput}
                     />
                     <Text style={s.unitLabel}>REPS</Text>
-                    <Pressable onPress={() => removeSet(ei, si)}>
+                    <Pressable onPress={() => removeSet(e.id, set.id)}>
                       <Ionicons name="trash-outline" size={18} color={C.muted} />
                     </Pressable>
                   </View>
