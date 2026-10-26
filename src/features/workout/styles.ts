@@ -59,10 +59,10 @@ export const fs = StyleSheet.create({
   setHeader: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 18, marginBottom: 6 },
   setLabel: { fontSize: 9, color: C.muted, fontWeight: '800', textAlign: 'center' },
   setRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginVertical: 4 },
-  setNumber: { width: 18 },
+  setNumber: { width: 24 },
   setRemove: { width: 18, height: 40, justifyContent: 'center' },
   weightControl: { flex: 1.2, minWidth: 88 },
-  repControl: { flex: 1, minWidth: 72 },
+  repControl: { flex: 1, minWidth: 72, marginLeft: 4 },
   inlineControl: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -75,7 +75,7 @@ export const fs = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: C.line,
   },
-  setProjectionRow: { minHeight: 28, marginLeft: 21, marginRight: 21, justifyContent: 'center' },
+  setProjectionRow: { minHeight: 28, marginLeft: 27, marginRight: 21, justifyContent: 'center' },
   setProjection: { fontSize: 13, fontWeight: '900', color: C.blue },
   adjustmentButton: {
     width: 22,
