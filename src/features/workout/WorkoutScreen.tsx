@@ -23,6 +23,7 @@ import { Button, confirmAction, Empty, fmt, Header, WeightInput } from '../../ui
 import { useWorkoutPersistence } from '../../workoutPersistence';
 import { DatePickerModal, ExerciseMoveButtons, ExercisePicker } from './components';
 import { ExerciseHistoryScreen } from '../exercises/ExerciseHistoryScreen';
+import { exerciseSetRecords } from './exerciseRecords';
 import {
   completedCopySources,
   moveExercise,
@@ -727,6 +728,7 @@ export function WorkoutScreen({ onSaved }: { onSaved: () => void }) {
         )}
         {entries.map((e, ei) => {
           const weightStep = weightStepForExercise(e.name);
+          const records = exerciseSetRecords(data.workouts, e.name, date, e.sets);
           const prev = previous(e.name);
           const prevDate = prev
             ? data.workouts.find((w) => w.exercises.includes(prev))?.date
@@ -771,6 +773,14 @@ export function WorkoutScreen({ onSaved }: { onSaved: () => void }) {
               </View>
               {e.sets.map((set, si) => {
                 const projected = projectedOneRepMax(set.weight, set.reps);
+                const record = records.get(set.id);
+                const recordLabel = record
+                  ? record.weight && record.reps
+                    ? 'New weight and rep record'
+                    : record.weight
+                      ? 'New weight record'
+                      : 'New rep record at this weight'
+                  : undefined;
                 return (
                   <View style={fs.workoutSet} key={set.id}>
                     <View style={fs.setRow}>
@@ -838,6 +848,15 @@ export function WorkoutScreen({ onSaved }: { onSaved: () => void }) {
                           ? `Projected 1RM  ${fmt(projected)} kg`
                           : 'Projected 1RM  —'}
                       </Text>
+                      {record && (
+                        <Ionicons
+                          name="trophy"
+                          size={16}
+                          color="#f4b942"
+                          accessibilityLabel={recordLabel}
+                          title={recordLabel}
+                        />
+                      )}
                     </View>
                   </View>
                 );

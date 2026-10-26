@@ -83,8 +83,15 @@ export const fs = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: C.line,
   },
-  setProjectionRow: { minHeight: 28, marginLeft: 27, marginRight: 21, justifyContent: 'center' },
-  setProjection: { fontSize: 13, fontWeight: '900', color: C.blue },
+  setProjectionRow: {
+    minHeight: 28,
+    marginLeft: 27,
+    marginRight: 21,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  setProjection: { flex: 1, fontSize: 13, fontWeight: '900', color: C.blue },
   adjustmentButton: {
     width: 22,
     height: 40,
