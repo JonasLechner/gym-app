@@ -750,37 +750,73 @@ export function WorkoutScreen({ onSaved }: { onSaved: () => void }) {
                 </Pressable>
               </View>
               <View style={fs.setHeader}>
-                <Text style={[fs.setLabel, { width: 32 }]}>SET</Text>
-                <Text style={fs.setLabel}>PREVIOUS</Text>
-                <Text style={fs.setLabel}>KG</Text>
-                <Text style={fs.setLabel}>REPS</Text>
-                <View style={{ width: 26 }} />
+                <Text style={[fs.setLabel, fs.setNumber]}>SET</Text>
+                <Text style={[fs.setLabel, fs.previous]}>PREV.</Text>
+                <Text style={[fs.setLabel, fs.weightControl]}>KG (±{fmt(weightStep)})</Text>
+                <Text style={[fs.setLabel, fs.repControl]}>REPS (±1)</Text>
+                <View style={{ width: 18 }} />
               </View>
               {e.sets.map((set, si) => {
                 const projected = projectedOneRepMax(set.weight, set.reps);
                 return (
                   <View style={fs.workoutSet} key={set.id}>
-                    <View style={s.setRow}>
-                      <Text style={s.setNo}>{si + 1}</Text>
-                      <Text style={fs.previous}>
+                    <View style={fs.setRow}>
+                      <Text style={[s.setNo, fs.setNumber]}>{si + 1}</Text>
+                      <Text style={fs.previous} numberOfLines={1} adjustsFontSizeToFit>
                         {prev?.sets[si]
                           ? `${fmt(prev.sets[si]!.weight)} × ${prev.sets[si]!.reps}`
                           : '—'}
                       </Text>
-                      <WeightInput
-                        value={set.weight}
-                        onChange={(weight) => changeSet(ei, si, { weight })}
-                        style={s.setInput}
-                      />
-                      <TextInput
-                        keyboardType="number-pad"
-                        selectTextOnFocus
-                        value={String(set.reps)}
-                        onChangeText={(v) => changeSet(ei, si, { reps: Number(v) || 0 })}
-                        style={s.setInput}
-                      />
-                      <Pressable onPress={() => removeSet(e.id, set.id)}>
-                        <Ionicons name="close-circle" size={21} color={C.muted} />
+                      <View style={[fs.inlineControl, fs.weightControl]}>
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={`Decrease weight by ${fmt(weightStep)} kilograms`}
+                          onPress={() => bumpSet(e.id, set.id, 'weight', -weightStep)}
+                          style={fs.adjustmentButton}
+                        >
+                          <Text style={fs.adjustmentButtonText}>−</Text>
+                        </Pressable>
+                        <WeightInput
+                          value={set.weight}
+                          onChange={(weight) => changeSet(ei, si, { weight })}
+                          style={[s.setInput, fs.inlineInput]}
+                        />
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={`Increase weight by ${fmt(weightStep)} kilograms`}
+                          onPress={() => bumpSet(e.id, set.id, 'weight', weightStep)}
+                          style={fs.adjustmentButton}
+                        >
+                          <Text style={fs.adjustmentButtonText}>+</Text>
+                        </Pressable>
+                      </View>
+                      <View style={[fs.inlineControl, fs.repControl]}>
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel="Decrease reps by 1"
+                          onPress={() => bumpSet(e.id, set.id, 'reps', -1)}
+                          style={fs.adjustmentButton}
+                        >
+                          <Text style={fs.adjustmentButtonText}>−</Text>
+                        </Pressable>
+                        <TextInput
+                          keyboardType="number-pad"
+                          selectTextOnFocus
+                          value={String(set.reps)}
+                          onChangeText={(v) => changeSet(ei, si, { reps: Number(v) || 0 })}
+                          style={[s.setInput, fs.inlineInput]}
+                        />
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel="Increase reps by 1"
+                          onPress={() => bumpSet(e.id, set.id, 'reps', 1)}
+                          style={fs.adjustmentButton}
+                        >
+                          <Text style={fs.adjustmentButtonText}>+</Text>
+                        </Pressable>
+                      </View>
+                      <Pressable style={fs.setRemove} onPress={() => removeSet(e.id, set.id)}>
+                        <Ionicons name="close-circle" size={18} color={C.muted} />
                       </Pressable>
                     </View>
                     <View style={fs.setProjectionRow}>
@@ -789,50 +825,6 @@ export function WorkoutScreen({ onSaved }: { onSaved: () => void }) {
                           ? `Projected 1RM  ${fmt(projected)} kg`
                           : 'Projected 1RM  —'}
                       </Text>
-                    </View>
-                    <View style={fs.adjustmentRow}>
-                      <View style={fs.adjustmentGroup}>
-                        <Text style={fs.adjustmentLabel}>KG</Text>
-                        <View style={fs.adjustmentButtons}>
-                          <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel={`Decrease weight by ${fmt(weightStep)} kilograms`}
-                            onPress={() => bumpSet(e.id, set.id, 'weight', -weightStep)}
-                            style={fs.adjustmentButton}
-                          >
-                            <Text style={fs.adjustmentButtonText}>−{fmt(weightStep)}</Text>
-                          </Pressable>
-                          <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel={`Increase weight by ${fmt(weightStep)} kilograms`}
-                            onPress={() => bumpSet(e.id, set.id, 'weight', weightStep)}
-                            style={fs.adjustmentButton}
-                          >
-                            <Text style={fs.adjustmentButtonText}>+{fmt(weightStep)}</Text>
-                          </Pressable>
-                        </View>
-                      </View>
-                      <View style={fs.adjustmentGroup}>
-                        <Text style={fs.adjustmentLabel}>REPS</Text>
-                        <View style={fs.adjustmentButtons}>
-                          <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel="Decrease reps by 1"
-                            onPress={() => bumpSet(e.id, set.id, 'reps', -1)}
-                            style={fs.adjustmentButton}
-                          >
-                            <Text style={fs.adjustmentButtonText}>−1</Text>
-                          </Pressable>
-                          <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel="Increase reps by 1"
-                            onPress={() => bumpSet(e.id, set.id, 'reps', 1)}
-                            style={fs.adjustmentButton}
-                          >
-                            <Text style={fs.adjustmentButtonText}>+1</Text>
-                          </Pressable>
-                        </View>
-                      </View>
                     </View>
                   </View>
                 );
