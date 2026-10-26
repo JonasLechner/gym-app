@@ -14,7 +14,8 @@ import {
 } from 'react-native';
 import { colorForCategory } from '../../categories';
 import { projectedOneRepMax } from '../../progress';
-import { newId, persistWorkoutOnWeb, prettyDate, today, useStore } from '../../store';
+import { newId, prettyDate, today, useStore } from '../../store';
+import { persistWorkoutOnWeb } from '../../workoutStorage';
 import { s } from '../../styles';
 import { fs } from './styles';
 import { C } from '../../theme';

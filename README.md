@@ -30,6 +30,27 @@ npm start
 Scan the QR code with Expo Go, or press `w` for the web version. Create a production web build with
 `npm run build:web`.
 
+## Workout persistence boundaries
+
+- `src/store.tsx` owns React state, loading/normalization, and store actions.
+- `src/workoutState.ts` owns framework-free workout merging and adoption of saved web snapshots. ID
+  generation is injected so tests can be deterministic.
+- `src/workoutStorage.ts` owns synchronous browser reads/writes and the storage key shared with
+  AsyncStorage. It merges a workout into the latest stored state; parse and storage failures
+  propagate rather than falling back to stale data.
+- `src/workoutPersistence.ts` coordinates completed-workout saving and rotating backups. Draft
+  autosaves do not go through backup coordination.
+
+Keep React and storage APIs out of workout-state transformations. The store retains its existing
+persistence exports for compatibility; new browser-persistence callers should import
+`workoutStorage` directly.
+
+Run focused persistence and record tests without React Native:
+
+```bash
+npx tsx --test src/workoutState.test.ts src/features/workout/exerciseRecords.test.ts
+```
+
 ## CSV import
 
 Choose **More → Import FitNotes CSV**. The importer accepts the format of the included FitNotes

@@ -3,9 +3,11 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import { canonicalExercise, englishExerciseName } from './categories';
 import { importFitNotesRows, parseFitNotesCsv, type ImportSummary } from './fitnotesImport';
 import type { AppData, ExerciseDefinition, ExerciseEntry, Workout } from './types';
+import { newId as ids } from './ids';
+import { DATA_STORAGE_KEY as KEY } from './workoutStorage';
+import { workoutStoreState as mergeWorkoutStoreState } from './workoutState';
 
-const KEY = '@liftnotes/data/v1';
-const ids = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+export { persistWorkoutOnWeb } from './workoutStorage';
 const EXERCISE_DEFAULTS_VERSION = 1;
 const DEFAULT_EXERCISES: [string, string][] = [
   ['Barbell Squat', 'Legs'],
@@ -94,49 +96,8 @@ export type Store = {
 };
 const Context = createContext<Store | null>(null);
 
-function withSavedWorkout(data: AppData, workout: Workout): AppData {
-  const workouts = [...data.workouts.filter((saved) => saved.id !== workout.id), workout].sort(
-    (a, b) => b.date.localeCompare(a.date),
-  );
-  const definitions = new Map(
-    data.exercises.map((exercise) => [exercise.name.toLowerCase(), exercise]),
-  );
-  workout.exercises.forEach((exercise) => {
-    if (!definitions.has(exercise.name.toLowerCase()))
-      definitions.set(exercise.name.toLowerCase(), {
-        id: ids(),
-        name: exercise.name,
-        category: exercise.category,
-      });
-  });
-  return {
-    ...data,
-    workouts,
-    exercises: [...definitions.values()].sort((a, b) => a.name.localeCompare(b.name)),
-  };
-}
-
-// AsyncStorage's web backend uses this localStorage key. Merge only this workout
-// into the latest stored data so an inactive tab cannot replace unrelated changes.
-export function persistWorkoutOnWeb(data: AppData, workout: Workout): AppData {
-  const stored = window.localStorage.getItem(KEY);
-  const latest: AppData = stored === null ? data : JSON.parse(stored);
-  const merged = withSavedWorkout(latest, workout);
-  window.localStorage.setItem(KEY, JSON.stringify(merged));
-  return merged;
-}
-
 export function workoutStoreState(data: AppData, workout: Workout, webSnapshot?: AppData): AppData {
-  if (!webSnapshot) return withSavedWorkout(data, workout);
-  // Preserve a category created in the same event as this workout edit.
-  const categories = data.customCategories.filter(
-    (category) =>
-      workout.exercises.some((e) => e.category === category.name) &&
-      !webSnapshot.customCategories.some((saved) => saved.name === category.name),
-  );
-  return categories.length
-    ? { ...webSnapshot, customCategories: [...webSnapshot.customCategories, ...categories] }
-    : webSnapshot;
+  return mergeWorkoutStoreState(data, workout, webSnapshot, ids);
 }
 
 function normalize(raw: Partial<AppData>): AppData {
