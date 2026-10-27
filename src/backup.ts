@@ -5,7 +5,18 @@ import type { AppData } from './types';
 
 export async function exportBackup(data: AppData, slot?: 'A' | 'B') {
   const suffix = slot ? `-${slot}` : '';
-  const filename = `LiftNotes-backup${suffix}.json`;
+  await exportBackupFile(data, `LiftNotes-backup${suffix}.json`);
+}
+
+/** Distinct from the edited import file and rotating A/B backups. */
+export async function exportBeforeRestoreBackup(data: AppData): Promise<string> {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const filename = `LiftNotes-before-restore-${timestamp}.json`;
+  await exportBackupFile(data, filename);
+  return filename;
+}
+
+async function exportBackupFile(data: AppData, filename: string) {
   const json = JSON.stringify(data);
 
   if (Platform.OS === 'web') {

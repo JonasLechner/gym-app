@@ -25,6 +25,25 @@ both in the same Files folder and choose **Replace** when iOS asks. This keeps t
 generations outside Safari. Clearing Safari website data or deleting the home-screen app may remove
 its working data, which can then be restored from either backup.
 
+## Safely restore a JSON backup
+
+Open **More → Restore backup** and select your JSON file. LiftNotes validates its structure, real
+dates, IDs, finite weights, integer reps, routines, and settings before offering restoration.
+Unrelated or malformed JSON is rejected without replacing local data.
+
+1. Review the selected file's workout/set counts. Restoration **replaces**, rather than merges with,
+   the data currently on this device.
+2. Tap **Export current data first**. Save the uniquely named
+   `LiftNotes-before-restore-<timestamp>.json` in Files, separately from the edited import and
+   rotating A/B backups. A download starting does not prove the file has been saved.
+3. Check **I saved the separate safety backup in Files**, then tap **Restore this backup** and
+   confirm the replacement. Keep the safety copy until you have checked your restored history.
+
+Close other LiftNotes windows during restoration. If local data changed after the safety export,
+restoration stops and requires a fresh safety copy. A successful restore is reported only after
+storage has finished writing. Supported older backups receive explicit legacy defaults; same-day
+sessions follow the lossless merge policy below.
+
 ## Development
 
 ```bash
@@ -45,6 +64,9 @@ Scan the QR code with Expo Go, or press `w` for the web version. Create a produc
   propagate rather than falling back to stale data.
 - `src/workoutPersistence.ts` coordinates completed-workout saving and rotating backups. Draft
   autosaves do not go through backup coordination.
+- `src/backupValidation.ts` validates imported JSON without React or storage dependencies.
+- `src/backupRestore.ts` owns safety-snapshot reads and guarded, awaited replacement writes;
+  `src/useBackupRestore.ts` connects those operations to the export UI and store.
 
 Keep React and storage APIs out of workout-state transformations. The store retains its existing
 persistence exports for compatibility; new browser-persistence callers should import
@@ -53,7 +75,7 @@ persistence exports for compatibility; new browser-persistence callers should im
 Run behavior and offline-cache tests without React Native:
 
 ```bash
-npx tsx --test src/dates.test.ts src/fitnotesImport.test.ts src/plates.test.ts src/workoutDays.test.ts src/workoutState.test.ts src/features/workout/exerciseRecords.test.ts src/features/records/personalRecords.test.ts
+npx tsx --test src/backupValidation.test.ts src/backupRestore.test.ts src/dates.test.ts src/fitnotesImport.test.ts src/plates.test.ts src/workoutDays.test.ts src/workoutState.test.ts src/features/workout/exerciseRecords.test.ts src/features/records/personalRecords.test.ts
 node --test scripts/offline.test.mjs
 ```
 

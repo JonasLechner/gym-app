@@ -5,6 +5,7 @@ import { importFitNotesRows, parseFitNotesCsv, type ImportSummary } from './fitn
 import type { AppData, ExerciseDefinition, ExerciseEntry, Workout } from './types';
 import { newId as ids } from './ids';
 import { mergeWorkoutsByDate } from './workoutDays';
+import { writeRestoredBackup } from './backupRestore';
 import { DATA_STORAGE_KEY as KEY } from './workoutStorage';
 import {
   assertWorkoutCanBeSaved,
@@ -97,7 +98,7 @@ export type Store = {
   updateSettings: (patch: Partial<AppData['settings']>) => void;
   setRoutines: (r: AppData['routines']) => void;
   importCsv: (csv: string) => { workouts: number; sets: number; duplicates: number };
-  replaceData: (d: AppData) => void;
+  replaceData: (d: AppData, expectedStoredValue: string | null) => Promise<void>;
 };
 const Context = createContext<Store | null>(null);
 
@@ -195,7 +196,15 @@ export function StoreProvider({ children }: React.PropsWithChildren) {
         setData((d) => ({ ...d, exercises: d.exercises.filter((e) => e.id !== id) })),
       updateSettings: (patch) => setData((d) => ({ ...d, settings: { ...d.settings, ...patch } })),
       setRoutines: (routines) => setData((d) => ({ ...d, routines })),
-      replaceData: (next) => setData(normalize(next)),
+      replaceData: async (next, expectedStoredValue) => {
+        const restored = await writeRestoredBackup(
+          next,
+          expectedStoredValue,
+          AsyncStorage,
+          normalize,
+        );
+        setData(restored);
+      },
       importCsv: (csv) => {
         const rows = parseFitNotesCsv(csv);
         const summary: ImportSummary = { workouts: 0, sets: 0, duplicates: 0 };

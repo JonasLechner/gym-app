@@ -14,13 +14,15 @@ import {
   View,
 } from 'react-native';
 import { exportBackup } from '../../backup';
+import { validateBackup } from '../../backupValidation';
 import { calculatePlateLoads, formatPlateWeight, type PlateLoad } from '../../plates';
 import { newId, useStore } from '../../store';
 import { s } from '../../styles';
 import { fs } from './styles';
 import { C } from '../../theme';
-import type { Routine } from '../../types';
-import { confirmAction, Header, WeightInput } from '../../ui';
+import type { AppData, Routine } from '../../types';
+import { confirmAction, Header, showAlert, WeightInput } from '../../ui';
+import { RestoreBackupModal } from './RestoreBackupModal';
 import { PersonalRecordsScreen } from '../records/PersonalRecordsScreen';
 
 function PlateLoadCard({ title, load }: { title: string; load: PlateLoad }) {
@@ -154,10 +156,11 @@ function PlateCalculatorModal({ visible, onClose }: { visible: boolean; onClose:
   );
 }
 export function MoreScreen() {
-  const { data, importCsv, replaceData, updateSettings, setRoutines } = useStore();
+  const { data, importCsv, updateSettings, setRoutines } = useStore();
   const [routineName, setRoutineName] = useState('');
   const [plateCalculator, setPlateCalculator] = useState(false);
   const [showRecords, setShowRecords] = useState(false);
+  const [restoreCandidate, setRestoreCandidate] = useState<AppData | null>(null);
   const importFile = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -186,7 +189,7 @@ export function MoreScreen() {
     try {
       await exportBackup(data);
     } catch (e) {
-      Alert.alert('Export failed', String(e));
+      showAlert('Export failed', String(e));
     }
   };
   const restore = async () => {
@@ -196,13 +199,15 @@ export function MoreScreen() {
         copyToCacheDirectory: true,
       });
       if (r.canceled) return;
-      const next = JSON.parse(await (await fetch(r.assets[0]!.uri)).text());
-      Alert.alert('Restore backup?', 'Current data will be replaced.', [
-        { text: 'Cancel' },
-        { text: 'Restore', onPress: () => replaceData(next) },
-      ]);
-    } catch {
-      Alert.alert('Invalid backup', 'The selected file could not be restored.');
+      const response = await fetch(r.assets[0]!.uri);
+      if (!response.ok) throw new Error('Could not read the selected backup file.');
+      const next: unknown = JSON.parse(await response.text());
+      setRestoreCandidate(validateBackup(next));
+    } catch (error) {
+      showAlert(
+        'Invalid backup',
+        error instanceof Error ? error.message : 'The selected file could not be restored.',
+      );
     }
   };
   const addRoutine = () => {
@@ -340,6 +345,9 @@ export function MoreScreen() {
         <Text style={fs.foot}>PRIVATE · OFFLINE · NO ACCOUNT</Text>
       </ScrollView>
       <PlateCalculatorModal visible={plateCalculator} onClose={() => setPlateCalculator(false)} />
+      {restoreCandidate && (
+        <RestoreBackupModal backup={restoreCandidate} onClose={() => setRestoreCandidate(null)} />
+      )}
     </>
   );
 }

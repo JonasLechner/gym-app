@@ -65,6 +65,8 @@ export function Button({
 }) {
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !!disabled }}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
@@ -80,14 +82,24 @@ export function Button({
   );
 }
 
-export function confirmAction(title: string, message: string, onConfirm: () => void) {
+export function showAlert(title: string, message: string) {
+  if (Platform.OS === 'web') window.alert(`${title}\n\n${message}`);
+  else Alert.alert(title, message);
+}
+
+export function confirmAction(
+  title: string,
+  message: string,
+  onConfirm: () => void,
+  confirmLabel = 'Delete',
+) {
   if (Platform.OS === 'web') {
     if ((globalThis as any).confirm(`${title}\n\n${message}`)) onConfirm();
     return;
   }
   Alert.alert(title, message, [
     { text: 'Cancel', style: 'cancel' },
-    { text: 'Delete', style: 'destructive', onPress: onConfirm },
+    { text: confirmLabel, style: 'destructive', onPress: onConfirm },
   ]);
 }
 
