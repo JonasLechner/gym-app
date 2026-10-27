@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Dimensions, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colorForCategory } from '../../categories';
+import { CORE_LIFTS } from '../../coreLifts';
 import { localDateKey } from '../../dates';
 import {
   bestSetsByRepRange,
@@ -331,7 +332,7 @@ function RangeSelector({
 export function ProgressScreen() {
   const { data } = useStore();
   const completedWorkouts = useMemo(() => data.workouts.filter((w) => !w.draft), [data.workouts]);
-  const defaults = ['Barbell Squat', 'Flat Barbell Bench Press', 'Deadlift'];
+  const defaults: string[] = CORE_LIFTS.map((lift) => lift.exerciseName);
   const [selectedExercise, setSelectedExercise] = useState(defaults[0]!);
   const [query, setQuery] = useState('');
   const [mode, setMode] = useState<'weight' | 'oneRM'>('weight');

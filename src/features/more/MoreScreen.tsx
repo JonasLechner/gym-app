@@ -21,6 +21,7 @@ import { fs } from './styles';
 import { C } from '../../theme';
 import type { Routine } from '../../types';
 import { confirmAction, Header, WeightInput } from '../../ui';
+import { PersonalRecordsScreen } from '../records/PersonalRecordsScreen';
 
 function PlateLoadCard({ title, load }: { title: string; load: PlateLoad }) {
   return (
@@ -156,6 +157,7 @@ export function MoreScreen() {
   const { data, importCsv, replaceData, updateSettings, setRoutines } = useStore();
   const [routineName, setRoutineName] = useState('');
   const [plateCalculator, setPlateCalculator] = useState(false);
+  const [showRecords, setShowRecords] = useState(false);
   const importFile = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -209,6 +211,7 @@ export function MoreScreen() {
     setRoutines([...data.routines, r]);
     setRoutineName('');
   };
+  if (showRecords) return <PersonalRecordsScreen onBack={() => setShowRecords(false)} />;
   return (
     <>
       <ScrollView contentContainerStyle={s.content}>
@@ -330,8 +333,8 @@ export function MoreScreen() {
           <Menu
             icon="trophy-outline"
             title="Personal records"
-            sub="Available under Progress"
-            onPress={() => {}}
+            sub="Squat · Bench · Deadlift"
+            onPress={() => setShowRecords(true)}
           />
         </View>
         <Text style={fs.foot}>PRIVATE · OFFLINE · NO ACCOUNT</Text>

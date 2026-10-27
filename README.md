@@ -53,7 +53,7 @@ persistence exports for compatibility; new browser-persistence callers should im
 Run behavior and offline-cache tests without React Native:
 
 ```bash
-npx tsx --test src/dates.test.ts src/fitnotesImport.test.ts src/plates.test.ts src/workoutDays.test.ts src/workoutState.test.ts src/features/workout/exerciseRecords.test.ts
+npx tsx --test src/dates.test.ts src/fitnotesImport.test.ts src/plates.test.ts src/workoutDays.test.ts src/workoutState.test.ts src/features/workout/exerciseRecords.test.ts src/features/records/personalRecords.test.ts
 node --test scripts/offline.test.mjs
 ```
 
@@ -63,6 +63,15 @@ Each date has at most one workout. Existing same-day sessions are merged on load
 all sets and combining notes. Exercises with the same name (case-insensitive) share one entry. If
 any merged session is a draft, the whole day remains a draft until **Finish**. Moving a workout onto
 an occupied date is rejected; selecting a date in Workout opens that date's existing workout.
+
+## Personal records
+
+Open **More → Personal records** for Squat, Bench, and Deadlift. The overview shows the heaviest set
+for each lift, including its best reps at that weight and achievement date. Select a lift to see the
+highest reps at each exact weight or its chronological weight/rep record history. Drafts and
+zero-rep sets are excluded. Ties retain the first achievement date, and exercise variants are not
+pooled. These records share their calculation rules with live workout trophies; estimated 1RM is not
+a separate record category.
 
 ## CSV import
 
