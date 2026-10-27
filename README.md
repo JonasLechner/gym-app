@@ -93,7 +93,8 @@ for each lift, including its best reps at that weight and achievement date. Sele
 highest reps at each exact weight or its chronological weight/rep record history. Drafts and
 zero-rep sets are excluded. Ties retain the first achievement date, and exercise variants are not
 pooled. These records share their calculation rules with live workout trophies; estimated 1RM is not
-a separate record category.
+a separate record category. The **SBD Total** sums the three all-time heaviest sets, across all
+dates, and stays blank until every lift has a record. It is a gym total, not a competition total.
 
 ## CSV import
 

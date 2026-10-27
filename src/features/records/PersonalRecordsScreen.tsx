@@ -6,7 +6,7 @@ import { prettyDate, useStore } from '../../store';
 import { s } from '../../styles';
 import { C } from '../../theme';
 import { Empty, Header } from '../../ui';
-import { personalRecords, type RecordAchievement } from './personalRecords';
+import { bigThreeTotal, personalRecords, type RecordAchievement } from './personalRecords';
 import { fs } from './styles';
 
 const weightText = (weight: number) => String(Number(weight.toFixed(6)));
@@ -20,6 +20,7 @@ export function PersonalRecordsScreen({ onBack }: { onBack: () => void }) {
       CORE_LIFTS.map((lift) => ({ ...lift, ...personalRecords(data.workouts, lift.exerciseName) })),
     [data.workouts],
   );
+  const total = bigThreeTotal(lifts);
   const selected = lifts.find((lift) => lift.id === selectedId)!;
   const rows = view === 'reps' ? selected.repRecords : selected.timeline;
 
@@ -118,6 +119,22 @@ export function PersonalRecordsScreen({ onBack }: { onBack: () => void }) {
                 </Pressable>
               );
             })}
+          </View>
+          <View style={fs.totalCard}>
+            <View style={fs.totalRow}>
+              <View style={fs.totalLabelRow}>
+                <Ionicons name="trophy" size={18} color={C.amber} />
+                <Text style={fs.totalLabel}>SBD TOTAL</Text>
+              </View>
+              <Text style={fs.totalWeight} numberOfLines={1} adjustsFontSizeToFit>
+                {total === null ? '—' : weightText(total)} <Text style={fs.unit}>kg</Text>
+              </Text>
+            </View>
+            <Text style={fs.totalHint}>
+              {total === null
+                ? 'Log a completed Squat, Bench, and Deadlift to see your total.'
+                : 'All-time heaviest sets, not a same-day competition total.'}
+            </Text>
           </View>
           <View style={fs.selectedHeading}>
             <Text style={fs.selectedTitle}>{selected.exerciseName}</Text>

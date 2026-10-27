@@ -1,3 +1,4 @@
+import { CORE_LIFTS, type CoreLiftId } from '../../coreLifts';
 import { createSetRecordTracker, type SetRecord } from '../../setRecords';
 import type { Workout } from '../../types';
 
@@ -16,6 +17,19 @@ export type PersonalRecords = {
   sessions: number;
   sets: number;
 };
+
+/** The all-time gym total requires a recorded best for every core lift. */
+export function bigThreeTotal(
+  lifts: readonly { id: CoreLiftId; heaviest: RecordAchievement | null }[],
+): number | null {
+  let total = 0;
+  for (const lift of CORE_LIFTS) {
+    const best = lifts.find((entry) => entry.id === lift.id)?.heaviest;
+    if (!best) return null;
+    total += best.weight;
+  }
+  return Number.isFinite(total) ? total : null;
+}
 
 /** Exact exercise-name matching (ignoring case/outer whitespace), never variant pooling. */
 export function personalRecords(workouts: Workout[], exerciseName: string): PersonalRecords {

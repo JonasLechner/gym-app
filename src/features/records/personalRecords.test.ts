@@ -3,7 +3,7 @@ import test from 'node:test';
 import { CORE_LIFTS } from '../../coreLifts';
 import type { SetEntry, Workout } from '../../types';
 import { exerciseSetRecords } from '../workout/exerciseRecords';
-import { personalRecords } from './personalRecords';
+import { bigThreeTotal, personalRecords } from './personalRecords';
 
 const BENCH = 'Flat Barbell Bench Press';
 const sets = (...values: [number, number][]): SetEntry[] =>
@@ -136,6 +136,52 @@ test('the three overview lifts use the same exact exercise definitions as Progre
     CORE_LIFTS.map((lift) => personalRecords(input, lift.exerciseName).heaviest?.weight),
     [100, 120, 140],
   );
+});
+
+test('the SBD total sums all three heaviest completed sets, independent of selection order', () => {
+  const input = CORE_LIFTS.map((lift, index) =>
+    workout(`2026-01-0${index + 1}`, sets([100 + index * 20, 5]), false, lift.exerciseName),
+  );
+  const lifts = CORE_LIFTS.map((lift) => ({
+    ...lift,
+    ...personalRecords(input, lift.exerciseName),
+  }));
+  assert.equal(bigThreeTotal(lifts), 360);
+  assert.equal(bigThreeTotal([...lifts].reverse()), 360);
+});
+
+test('missing, draft-only, or variant-only lifts cannot produce a partial SBD total', () => {
+  const input = [
+    workout('2026-01-01', sets([120, 5]), false, 'Barbell Squat'),
+    workout('2026-01-02', sets([80, 5])),
+    workout('2026-01-03', sets([160, 3]), true, 'Deadlift'),
+    workout('2026-01-04', sets([200, 5]), false, 'Romanian Deadlift'),
+  ];
+  const lifts = CORE_LIFTS.map((lift) => ({
+    ...lift,
+    ...personalRecords(input, lift.exerciseName),
+  }));
+  assert.equal(bigThreeTotal(lifts), null);
+  assert.equal(bigThreeTotal(lifts.slice(0, 2)), null);
+  assert.equal(bigThreeTotal([lifts[0]!, lifts[0]!, lifts[1]!]), null);
+  assert.equal(bigThreeTotal([]), null);
+});
+
+test('SBD totals retain fractional weights and distinguish zero from missing records', () => {
+  for (const [weights, expected] of [
+    [[120.25, 80.5, 160.75], 361.5],
+    [[0, 0, 0], 0],
+  ] as const) {
+    const input = CORE_LIFTS.map((lift, index) =>
+      workout(`2026-01-0${index + 1}`, sets([weights[index]!, 1]), false, lift.exerciseName),
+    );
+    assert.equal(
+      bigThreeTotal(
+        CORE_LIFTS.map((lift) => ({ ...lift, ...personalRecords(input, lift.exerciseName) })),
+      ),
+      expected,
+    );
+  }
 });
 
 test('historical record flags agree with live workout trophy flags', () => {
