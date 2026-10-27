@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { AppData, Workout } from './types';
-import { withSavedWorkout, workoutStoreState } from './workoutState';
+import { withSavedWorkout, workoutSaveError, workoutStoreState } from './workoutState';
 import { DATA_STORAGE_KEY, persistWorkoutOnWeb } from './workoutStorage';
 
 const workout = (id = 'workout', date = '2026-01-02'): Workout => ({
@@ -29,6 +29,66 @@ const data = (): AppData => ({
 const unexpectedId = () => {
   throw new Error('Existing definitions must not generate IDs');
 };
+
+test('empty completed workouts are rejected by every save boundary without changing data', () => {
+  for (const draft of [false, undefined]) {
+    for (const exercises of [[], [{ ...workout().exercises[0]!, sets: [] }]]) {
+      const empty: Workout = { ...workout(), draft, exercises };
+      const original = data();
+      original.workouts = [{ ...workout(), draft: false }];
+      const before = structuredClone(original);
+      const snapshot = structuredClone(original);
+      const expected = {
+        message: 'A completed workout needs at least one set. Use Delete workout to remove it.',
+      };
+      assert.equal(workoutSaveError(empty), expected.message);
+      assert.throws(() => withSavedWorkout(original, empty, unexpectedId), expected);
+      assert.throws(() => workoutStoreState(original, empty, undefined, unexpectedId), expected);
+      assert.throws(() => workoutStoreState(original, empty, snapshot, unexpectedId), expected);
+      assert.throws(
+        () =>
+          persistWorkoutOnWeb(original, empty, {
+            getItem: () => assert.fail('Invalid saves must not access storage'),
+            setItem: () => assert.fail('Invalid saves must not write storage'),
+          }),
+        expected,
+      );
+      assert.deepEqual(original, before);
+      assert.deepEqual(snapshot, before);
+    }
+  }
+});
+
+test('empty drafts remain savable through state and web persistence', () => {
+  for (const exercises of [[], [{ ...workout().exercises[0]!, sets: [] }]]) {
+    const empty: Workout = { ...workout(), draft: true, exercises };
+    assert.equal(workoutSaveError(empty), null);
+    const result = workoutStoreState(data(), empty, undefined, () => 'definition');
+    assert.deepEqual(result.workouts, [empty]);
+    let written: AppData | undefined;
+    const snapshot = persistWorkoutOnWeb(data(), empty, {
+      getItem: () => null,
+      setItem: (_key, value) => {
+        written = JSON.parse(value);
+      },
+    });
+    assert.deepEqual(written?.workouts, [empty]);
+    assert.equal(workoutStoreState(data(), empty, snapshot, unexpectedId), snapshot);
+  }
+});
+
+test('completed workouts need a set, not positive weight or reps in that set', () => {
+  const completed: Workout = {
+    ...workout(),
+    draft: false,
+    exercises: [
+      { ...workout().exercises[0]!, sets: [] },
+      { id: 'second', name: 'Squat', category: 'Legs', sets: [{ id: 'zero', weight: 0, reps: 0 }] },
+    ],
+  };
+  assert.equal(workoutSaveError(completed), null);
+  assert.equal(withSavedWorkout(data(), completed, () => 'id').workouts[0], completed);
+});
 
 test('saving replaces only the matching workout and sorts dates without mutating input', () => {
   const original = data();

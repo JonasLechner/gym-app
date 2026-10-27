@@ -5,9 +5,13 @@ import { importFitNotesRows, parseFitNotesCsv, type ImportSummary } from './fitn
 import type { AppData, ExerciseDefinition, ExerciseEntry, Workout } from './types';
 import { newId as ids } from './ids';
 import { DATA_STORAGE_KEY as KEY } from './workoutStorage';
-import { workoutStoreState as mergeWorkoutStoreState } from './workoutState';
+import {
+  assertWorkoutCanBeSaved,
+  workoutStoreState as mergeWorkoutStoreState,
+} from './workoutState';
 
 export { persistWorkoutOnWeb } from './workoutStorage';
+export { today } from './dates';
 const EXERCISE_DEFAULTS_VERSION = 1;
 const DEFAULT_EXERCISES: [string, string][] = [
   ['Barbell Squat', 'Legs'],
@@ -159,7 +163,10 @@ export function StoreProvider({ children }: React.PropsWithChildren) {
     () => ({
       data,
       ready,
-      saveWorkout: (w, webSnapshot) => setData((d) => workoutStoreState(d, w, webSnapshot)),
+      saveWorkout: (w, webSnapshot) => {
+        assertWorkoutCanBeSaved(w);
+        setData((d) => workoutStoreState(d, w, webSnapshot));
+      },
       deleteWorkout: (id) =>
         setData((d) => ({ ...d, workouts: d.workouts.filter((w) => w.id !== id) })),
       addExercise: (name, category) => {
@@ -206,7 +213,6 @@ export const useStore = () => {
   return v;
 };
 export const newId = ids;
-export const today = () => new Date().toISOString().slice(0, 10);
 export const prettyDate = (date: string) => {
   const [y, m, d] = date.split('-');
   return `${d}.${m}.${y}`;

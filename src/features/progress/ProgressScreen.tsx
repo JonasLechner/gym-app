@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Dimensions, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colorForCategory } from '../../categories';
+import { localDateKey } from '../../dates';
 import {
   bestSetsByRepRange,
   exerciseProgress,
@@ -16,9 +17,6 @@ import { fs } from './styles';
 import { C } from '../../theme';
 import type { Workout } from '../../types';
 import { Empty, fmt, Header } from '../../ui';
-
-const localDateKey = (date: Date) =>
-  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
 function ProgressLineChart({
   points,

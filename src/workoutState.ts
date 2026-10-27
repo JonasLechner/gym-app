@@ -1,7 +1,19 @@
 import type { AppData, Workout } from './types';
 
+export function workoutSaveError(workout: Workout): string | null {
+  return !workout.draft && !workout.exercises.some((exercise) => exercise.sets.length > 0)
+    ? 'A completed workout needs at least one set. Use Delete workout to remove it.'
+    : null;
+}
+
+export function assertWorkoutCanBeSaved(workout: Workout): void {
+  const error = workoutSaveError(workout);
+  if (error) throw new Error(error);
+}
+
 /** Merge one workout without replacing unrelated data or mutating the input. */
 export function withSavedWorkout(data: AppData, workout: Workout, newId: () => string): AppData {
+  assertWorkoutCanBeSaved(workout);
   const workouts = [...data.workouts.filter((saved) => saved.id !== workout.id), workout].sort(
     (a, b) => b.date.localeCompare(a.date),
   );
@@ -30,6 +42,7 @@ export function workoutStoreState(
   webSnapshot: AppData | undefined,
   newId: () => string,
 ): AppData {
+  assertWorkoutCanBeSaved(workout);
   if (!webSnapshot) return withSavedWorkout(data, workout, newId);
   const categories = data.customCategories.filter(
     (category) =>

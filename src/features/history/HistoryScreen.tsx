@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Modal,
+  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -23,6 +24,7 @@ import { C } from '../../theme';
 import type { ExerciseDefinition, SetEntry, Workout } from '../../types';
 import { Button, confirmAction, fmt, Header, WeightInput } from '../../ui';
 import { useWorkoutPersistence } from '../../workoutPersistence';
+import { workoutSaveError } from '../../workoutState';
 import { DatePickerModal, ExerciseMoveButtons, ExercisePicker } from '../workout/components';
 import { moveExercise, previousCompletedWorkout } from '../workout/workoutEdits';
 
@@ -121,6 +123,12 @@ function HistoryEditModal({ workout, onClose }: { workout: Workout | null; onClo
     const next = draft.draft
       ? draft
       : { ...draft, exercises: draft.exercises.filter((e) => e.sets.length) };
+    const error = workoutSaveError(next);
+    if (error) {
+      if (Platform.OS === 'web') window.alert(error);
+      else Alert.alert('Cannot save workout', error);
+      return;
+    }
     if (next.draft) saveWorkout(next);
     else {
       const result = await persistWorkout(next);

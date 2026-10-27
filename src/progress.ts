@@ -1,4 +1,5 @@
 import type { SetEntry, Workout } from './types';
+import { localDateKey } from './dates';
 
 export type ProgressPoint = {
   date: string;
@@ -81,14 +82,6 @@ export function bestSetsByRepRange(workouts: Workout[], exerciseName: string) {
       .filter((set) => set.reps >= range.min && set.reps <= range.max)
       .sort((a, b) => b.weight - a.weight)[0],
   }));
-}
-
-function localDateKey(date: Date) {
-  return [
-    date.getFullYear(),
-    String(date.getMonth() + 1).padStart(2, '0'),
-    String(date.getDate()).padStart(2, '0'),
-  ].join('-');
 }
 
 export function weeklyTotalVolume(workouts: Workout[]): ValuePoint[] {

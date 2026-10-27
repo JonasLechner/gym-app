@@ -1,6 +1,6 @@
 import { newId } from './ids';
 import type { AppData, Workout } from './types';
-import { withSavedWorkout } from './workoutState';
+import { assertWorkoutCanBeSaved, withSavedWorkout } from './workoutState';
 
 // AsyncStorage's web backend uses this same key.
 export const DATA_STORAGE_KEY = '@liftnotes/data/v1';
@@ -16,6 +16,7 @@ export function persistWorkoutOnWeb(
   workout: Workout,
   storage: WorkoutStorage = window.localStorage,
 ): AppData {
+  assertWorkoutCanBeSaved(workout);
   const stored = storage.getItem(DATA_STORAGE_KEY);
   const latest: AppData = stored === null ? data : JSON.parse(stored);
   const merged = withSavedWorkout(latest, workout, newId);

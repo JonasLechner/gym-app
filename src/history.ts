@@ -1,4 +1,5 @@
 import type { Workout } from './types';
+import { localDateKey } from './dates';
 
 export function filterWorkoutsByCategories(workouts: Workout[], categories: string[]): Workout[] {
   if (!categories.length) return workouts;
@@ -17,14 +18,6 @@ export function workoutCategoriesByDate(workouts: Workout[]): Map<string, string
     result.set(workout.date, categories);
   });
   return result;
-}
-
-function localDateKey(date: Date) {
-  return [
-    date.getFullYear(),
-    String(date.getMonth() + 1).padStart(2, '0'),
-    String(date.getDate()).padStart(2, '0'),
-  ].join('-');
 }
 
 export function calculateHistoryMetrics(
