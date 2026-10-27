@@ -145,7 +145,7 @@ test('web snapshot is authoritative except for relevant categories created in th
     { id: 'unrelated', name: 'Unrelated', color: '#abcdef' },
   ];
   const snapshot = data();
-  snapshot.workouts = [workout(), workout('other-tab')];
+  snapshot.workouts = [workout(), workout('other-tab', '2026-01-01')];
   snapshot.settings.restSeconds = 180;
   const before = structuredClone(snapshot);
   const result = workoutStoreState(original, workout(), snapshot, unexpectedId);
@@ -160,7 +160,7 @@ test('web snapshot is authoritative except for relevant categories created in th
 test('web persistence reads latest storage instead of overwriting unrelated changes with stale data', () => {
   const stale = data();
   const latest = data();
-  latest.workouts = [workout('other-tab')];
+  latest.workouts = [workout('other-tab', '2026-01-01')];
   latest.settings.restSeconds = 180;
   const writes: [string, string][] = [];
   const result = persistWorkoutOnWeb(stale, workout(), {

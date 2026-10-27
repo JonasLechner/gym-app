@@ -4,6 +4,7 @@ import { canonicalExercise, englishExerciseName } from './categories';
 import { importFitNotesRows, parseFitNotesCsv, type ImportSummary } from './fitnotesImport';
 import type { AppData, ExerciseDefinition, ExerciseEntry, Workout } from './types';
 import { newId as ids } from './ids';
+import { mergeWorkoutsByDate } from './workoutDays';
 import { DATA_STORAGE_KEY as KEY } from './workoutStorage';
 import {
   assertWorkoutCanBeSaved,
@@ -105,17 +106,20 @@ export function workoutStoreState(data: AppData, workout: Workout, webSnapshot?:
 }
 
 function normalize(raw: Partial<AppData>): AppData {
-  const workouts = (raw.workouts ?? []).map((w) => {
-    const merged = new Map<string, ExerciseEntry>();
-    w.exercises.forEach((e) => {
-      const fixed = canonicalExercise(e.name, e.category);
-      const key = fixed.name.toLowerCase();
-      const found = merged.get(key);
-      if (found) found.sets.push(...e.sets);
-      else merged.set(key, { ...e, ...fixed, sets: [...e.sets] });
-    });
-    return { ...w, exercises: [...merged.values()] };
-  });
+  const workouts = mergeWorkoutsByDate(
+    (raw.workouts ?? []).map((w) => {
+      const merged = new Map<string, ExerciseEntry>();
+      w.exercises.forEach((e) => {
+        const fixed = canonicalExercise(e.name, e.category);
+        const key = fixed.name.toLowerCase();
+        const found = merged.get(key);
+        if (found) found.sets.push(...e.sets);
+        else merged.set(key, { ...e, ...fixed, sets: [...e.sets] });
+      });
+      return { ...w, exercises: [...merged.values()] };
+    }),
+    ids,
+  );
   const definitions = new Map<string, ExerciseDefinition>();
   if ((raw.settings?.exerciseDefaultsVersion ?? 0) < EXERCISE_DEFAULTS_VERSION)
     DEFAULT_EXERCISES.forEach(([name, category]) =>
@@ -164,7 +168,7 @@ export function StoreProvider({ children }: React.PropsWithChildren) {
       data,
       ready,
       saveWorkout: (w, webSnapshot) => {
-        assertWorkoutCanBeSaved(w);
+        assertWorkoutCanBeSaved(w, webSnapshot?.workouts ?? data.workouts);
         setData((d) => workoutStoreState(d, w, webSnapshot));
       },
       deleteWorkout: (id) =>

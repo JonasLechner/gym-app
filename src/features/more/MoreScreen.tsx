@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import {
   Alert,
   Modal,
+  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -13,13 +14,13 @@ import {
   View,
 } from 'react-native';
 import { exportBackup } from '../../backup';
-import { calculatePlateLoads, type PlateLoad } from '../../plates';
+import { calculatePlateLoads, formatPlateWeight, type PlateLoad } from '../../plates';
 import { newId, useStore } from '../../store';
 import { s } from '../../styles';
 import { fs } from './styles';
 import { C } from '../../theme';
 import type { Routine } from '../../types';
-import { confirmAction, fmt, Header, WeightInput } from '../../ui';
+import { confirmAction, Header, WeightInput } from '../../ui';
 
 function PlateLoadCard({ title, load }: { title: string; load: PlateLoad }) {
   return (
@@ -27,9 +28,9 @@ function PlateLoadCard({ title, load }: { title: string; load: PlateLoad }) {
       <View style={fs.plateResultHead}>
         <View>
           <Text style={s.overline}>{title}</Text>
-          <Text style={fs.plateTotal}>{fmt(load.total)} kg</Text>
+          <Text style={fs.plateTotal}>{formatPlateWeight(load.total)} kg</Text>
         </View>
-        <Text style={fs.platePerSide}>{fmt(load.perSide)} kg / side</Text>
+        <Text style={fs.platePerSide}>{formatPlateWeight(load.perSide)} kg / side</Text>
       </View>
       {load.plates.length ? (
         <>
@@ -40,14 +41,14 @@ function PlateLoadCard({ title, load }: { title: string; load: PlateLoad }) {
                   key={`${weight}-${index}`}
                   style={[fs.plateVisual, { height: 28 + Math.min(weight, 25) }]}
                 >
-                  <Text style={fs.plateVisualText}>{fmt(weight)}</Text>
+                  <Text style={fs.plateVisualText}>{formatPlateWeight(weight)}</Text>
                 </View>
               )),
             )}
           </View>
           {load.plates.map(({ weight, count }) => (
             <View key={weight} style={fs.plateLine}>
-              <Text style={s.rowTitle}>{fmt(weight)} kg plate</Text>
+              <Text style={s.rowTitle}>{formatPlateWeight(weight)} kg plate</Text>
               <Text style={fs.plateCount}>× {count} each side</Text>
             </View>
           ))}
@@ -83,7 +84,12 @@ function PlateCalculatorModal({ visible, onClose }: { visible: boolean; onClose:
         <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
           <Text style={s.label}>TARGET TOTAL WEIGHT</Text>
           <View style={fs.plateTarget}>
-            <WeightInput value={target} onChange={setTarget} style={fs.plateTargetInput} />
+            <WeightInput
+              value={target}
+              onChange={setTarget}
+              style={fs.plateTargetInput}
+              formatValue={formatPlateWeight}
+            />
             <Text style={fs.plateTargetUnit}>KG</Text>
           </View>
           <Text style={s.helper}>Total weight includes the bar. Collars are ignored.</Text>
@@ -105,7 +111,12 @@ function PlateCalculatorModal({ visible, onClose }: { visible: boolean; onClose:
             <View style={fs.customBarRow}>
               <Text style={s.rowTitle}>Custom bar</Text>
               <View style={fs.customBarInput}>
-                <WeightInput value={customBar} onChange={setCustomBar} style={fs.plateSmallInput} />
+                <WeightInput
+                  value={customBar}
+                  onChange={setCustomBar}
+                  style={fs.plateSmallInput}
+                  formatValue={formatPlateWeight}
+                />
                 <Text style={s.unitLabel}>KG</Text>
               </View>
             </View>
@@ -164,7 +175,9 @@ export function MoreScreen() {
         100,
       );
     } catch (e) {
-      Alert.alert('Import failed', e instanceof Error ? e.message : 'Could not read file.');
+      const message = e instanceof Error ? e.message : 'Could not read file.';
+      if (Platform.OS === 'web') window.alert(`Import failed\n\n${message}`);
+      else Alert.alert('Import failed', message);
     }
   };
   const backup = async () => {

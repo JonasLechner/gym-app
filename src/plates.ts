@@ -1,5 +1,7 @@
 export const PLATE_SIZES = [25, 20, 15, 10, 5, 2.5, 1.25] as const;
 
+export const formatPlateWeight = (weight: number) => String(Number(weight.toFixed(2)));
+
 export type PlateCount = { weight: number; count: number };
 export type PlateLoad = { total: number; perSide: number; plates: PlateCount[] };
 export type PlateCalculation = {

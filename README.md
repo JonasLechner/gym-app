@@ -11,8 +11,13 @@ repository settings, open:
 **https://jonaslechner.github.io/gym-app/**
 
 In Safari, tap **Share → Add to Home Screen → Add**. LiftNotes then opens from its own icon and
-works offline after its first successful load. No Expo Go, account, payment, or running PC is
-required.
+works offline once its first online visit has finished installing the offline cache. Keep it online
+for that initial download. No Expo Go, account, payment, or running PC is required.
+
+Production builds precache the complete app (HTML, JavaScript, fonts, icons, and manifest) with
+content integrity checks. Updates install in a separate versioned cache and wait until existing app
+windows are closed before activation, so an open workout keeps using its original build. After
+downloading an update online, close all LiftNotes windows/tabs and reopen to use it.
 
 App data stays in Safari storage on that iPhone. By default, finishing a workout also exports a
 backup, alternating between `LiftNotes-backup-A.json` and `LiftNotes-backup-B.json`. Always save
@@ -45,13 +50,25 @@ Keep React and storage APIs out of workout-state transformations. The store reta
 persistence exports for compatibility; new browser-persistence callers should import
 `workoutStorage` directly.
 
-Run focused persistence and record tests without React Native:
+Run behavior and offline-cache tests without React Native:
 
 ```bash
-npx tsx --test src/workoutState.test.ts src/features/workout/exerciseRecords.test.ts
+npx tsx --test src/dates.test.ts src/fitnotesImport.test.ts src/plates.test.ts src/workoutDays.test.ts src/workoutState.test.ts src/features/workout/exerciseRecords.test.ts
+node --test scripts/offline.test.mjs
 ```
+
+## One workout per day
+
+Each date has at most one workout. Existing same-day sessions are merged on load/restore, retaining
+all sets and combining notes. Exercises with the same name (case-insensitive) share one entry. If
+any merged session is a draft, the whole day remains a draft until **Finish**. Moving a workout onto
+an occupied date is rejected; selecting a date in Workout opens that date's existing workout.
 
 ## CSV import
 
 Choose **More → Import FitNotes CSV**. The importer accepts the format of the included FitNotes
-export. Rows sharing a date become one workout, and duplicate sets are skipped on repeated imports.
+export. Kilogram units are retained; pounds are converted to kilograms (rounded to six decimal
+places). Missing/unsupported units and invalid weights reject the import before data is changed.
+Rows sharing a date merge into that day's workout, retaining its draft status. Duplicate sets are
+skipped on repeated imports, including imports into drafts; repeated identical sets within a single
+export retain their original count.

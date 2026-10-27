@@ -25,6 +25,7 @@ import type { ExerciseDefinition, SetEntry, Workout } from '../../types';
 import { Button, confirmAction, fmt, Header, WeightInput } from '../../ui';
 import { useWorkoutPersistence } from '../../workoutPersistence';
 import { workoutSaveError } from '../../workoutState';
+import { workoutDateError } from '../../workoutDays';
 import { DatePickerModal, ExerciseMoveButtons, ExercisePicker } from '../workout/components';
 import { moveExercise, previousCompletedWorkout } from '../workout/workoutEdits';
 
@@ -119,14 +120,23 @@ function HistoryEditModal({ workout, onClose }: { workout: Workout | null; onClo
         ],
       };
     });
+  const showSaveError = (error: string) => {
+    if (Platform.OS === 'web') window.alert(error);
+    else Alert.alert('Cannot save workout', error);
+  };
+  const selectDate = (date: string) => {
+    const next = { ...draft, date };
+    const error = workoutDateError(next, data.workouts);
+    if (error) showSaveError(error);
+    else setDraft(next);
+  };
   const save = async () => {
     const next = draft.draft
       ? draft
       : { ...draft, exercises: draft.exercises.filter((e) => e.sets.length) };
-    const error = workoutSaveError(next);
+    const error = workoutSaveError(next, data.workouts);
     if (error) {
-      if (Platform.OS === 'web') window.alert(error);
-      else Alert.alert('Cannot save workout', error);
+      showSaveError(error);
       return;
     }
     if (next.draft) saveWorkout(next);
@@ -246,7 +256,7 @@ function HistoryEditModal({ workout, onClose }: { workout: Workout | null; onClo
           visible={datePicker}
           value={draft.date}
           onClose={() => setDatePicker(false)}
-          onSelect={(date) => setDraft((w) => w && { ...w, date })}
+          onSelect={selectDate}
         />
       </SafeAreaView>
     </Modal>

@@ -48,7 +48,6 @@ function CopyWorkoutModal({
   const eligible = completedCopySources(data.workouts, targetDate);
   const latest = eligible[0]?.date ?? targetDate;
   const [month, setMonth] = useState(latest.slice(0, 7));
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [source, setSource] = useState<Workout | null>(null);
   const [preview, setPreview] = useState<ExerciseEntry[]>([]);
   const [addingExercise, setAddingExercise] = useState(false);
@@ -56,7 +55,6 @@ function CopyWorkoutModal({
     if (visible) {
       const next = eligible[0];
       setMonth((next?.date ?? targetDate).slice(0, 7));
-      setSelectedDay(null);
       setSource(null);
       setPreview([]);
       setAddingExercise(false);
@@ -70,8 +68,7 @@ function CopyWorkoutModal({
     const day = i - leading + 1;
     return day > 0 && day <= count ? day : null;
   });
-  const byDate = new Map<string, Workout[]>();
-  eligible.forEach((w) => byDate.set(w.date, [...(byDate.get(w.date) ?? []), w]));
+  const byDate = new Map(eligible.map((workout) => [workout.date, workout]));
   const choose = (w: Workout) => {
     setSource(w);
     setPreview(
@@ -83,9 +80,8 @@ function CopyWorkoutModal({
     );
   };
   const selectDate = (date: string) => {
-    const found = byDate.get(date) ?? [];
-    setSelectedDay(date);
-    if (found.length === 1) choose(found[0]!);
+    const workout = byDate.get(date);
+    if (workout) choose(workout);
   };
   const move = (delta: number) => {
     const next = new Date(year!, monthNumber! - 1 + delta, 1);
@@ -107,14 +103,11 @@ function CopyWorkoutModal({
     );
   const movePreview = (id: string, direction: -1 | 1) =>
     setPreview((items) => moveExercise(items, id, direction));
-  const workoutsForDay = selectedDay ? (byDate.get(selectedDay) ?? []) : [];
   const title = addingExercise
     ? 'Add exercise'
     : source
       ? 'Review copied workout'
-      : workoutsForDay.length > 1
-        ? 'Choose workout'
-        : 'Copy past workout';
+      : 'Copy past workout';
   return (
     <Modal
       visible={visible}
@@ -257,30 +250,6 @@ function CopyWorkoutModal({
               onPress={() => onCopy(preview)}
             />
           </ScrollView>
-        ) : workoutsForDay.length > 1 ? (
-          <ScrollView contentContainerStyle={s.content}>
-            <Text style={s.selectedDate}>{prettyDate(selectedDay!)}</Text>
-            {workoutsForDay.map((w, index) => (
-              <Pressable key={w.id} style={s.card} onPress={() => choose(w)}>
-                <View style={s.cardHead}>
-                  <View>
-                    <Text style={s.cardTitle}>Workout {index + 1}</Text>
-                    <Text style={s.rowSub}>
-                      {w.exercises
-                        .map((e) => e.category)
-                        .filter((v, i, a) => a.indexOf(v) === i)
-                        .join(' · ')}
-                    </Text>
-                    <Text style={s.rowSub}>
-                      {w.exercises.length} exercises ·{' '}
-                      {w.exercises.reduce((a, e) => a + e.sets.length, 0)} sets
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color={C.blue} />
-                </View>
-              </Pressable>
-            ))}
-          </ScrollView>
         ) : (
           <ScrollView contentContainerStyle={s.content}>
             <Text style={s.helper}>
@@ -308,9 +277,7 @@ function CopyWorkoutModal({
                   const date = day ? `${month}-${String(day).padStart(2, '0')}` : '';
                   const available = byDate.has(date);
                   const categories = [
-                    ...new Set(
-                      (byDate.get(date) ?? []).flatMap((w) => w.exercises.map((e) => e.category)),
-                    ),
+                    ...new Set(byDate.get(date)?.exercises.map((e) => e.category) ?? []),
                   ];
                   return (
                     <Pressable

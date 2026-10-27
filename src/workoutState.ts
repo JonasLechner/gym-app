@@ -1,19 +1,20 @@
 import type { AppData, Workout } from './types';
+import { workoutDateError } from './workoutDays';
 
-export function workoutSaveError(workout: Workout): string | null {
+export function workoutSaveError(workout: Workout, workouts: Workout[] = []): string | null {
   return !workout.draft && !workout.exercises.some((exercise) => exercise.sets.length > 0)
     ? 'A completed workout needs at least one set. Use Delete workout to remove it.'
-    : null;
+    : workoutDateError(workout, workouts);
 }
 
-export function assertWorkoutCanBeSaved(workout: Workout): void {
-  const error = workoutSaveError(workout);
+export function assertWorkoutCanBeSaved(workout: Workout, workouts: Workout[] = []): void {
+  const error = workoutSaveError(workout, workouts);
   if (error) throw new Error(error);
 }
 
 /** Merge one workout without replacing unrelated data or mutating the input. */
 export function withSavedWorkout(data: AppData, workout: Workout, newId: () => string): AppData {
-  assertWorkoutCanBeSaved(workout);
+  assertWorkoutCanBeSaved(workout, data.workouts);
   const workouts = [...data.workouts.filter((saved) => saved.id !== workout.id), workout].sort(
     (a, b) => b.date.localeCompare(a.date),
   );
@@ -42,7 +43,7 @@ export function workoutStoreState(
   webSnapshot: AppData | undefined,
   newId: () => string,
 ): AppData {
-  assertWorkoutCanBeSaved(workout);
+  assertWorkoutCanBeSaved(workout, webSnapshot?.workouts ?? data.workouts);
   if (!webSnapshot) return withSavedWorkout(data, workout, newId);
   const categories = data.customCategories.filter(
     (category) =>

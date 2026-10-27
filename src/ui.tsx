@@ -10,16 +10,18 @@ export function WeightInput({
   value,
   onChange,
   style,
+  formatValue = fmt,
 }: {
   value: number;
   onChange: (value: number) => void;
   style?: any;
+  formatValue?: (value: number) => string;
 }) {
-  const [text, setText] = useState(fmt(value));
+  const [text, setText] = useState(formatValue(value));
   const [focused, setFocused] = useState(false);
   useEffect(() => {
-    if (!focused) setText(fmt(value));
-  }, [value, focused]);
+    if (!focused) setText(formatValue(value));
+  }, [value, focused, formatValue]);
   const update = (next: string) => {
     setText(next);
     if (!/[.,]$/.test(next)) {
@@ -32,8 +34,8 @@ export function WeightInput({
     const parsed = Number(text.replace(',', '.'));
     if (Number.isFinite(parsed)) {
       onChange(parsed);
-      setText(fmt(parsed));
-    } else setText(fmt(value));
+      setText(formatValue(parsed));
+    } else setText(formatValue(value));
   };
   return (
     <TextInput
