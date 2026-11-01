@@ -80,7 +80,7 @@ persistence exports for compatibility; new browser-persistence callers should im
 Run behavior and offline-cache tests without React Native:
 
 ```bash
-npx tsx --test src/backupData.test.ts src/backupValidation.test.ts src/backupRestore.test.ts src/dates.test.ts src/exercises.test.ts src/exerciseStorage.test.ts src/fitnotesImport.test.ts src/plates.test.ts src/useExerciseOrderScroll.test.ts src/workoutDays.test.ts src/workoutState.test.ts src/features/workout/exerciseRecords.test.ts src/features/records/personalRecords.test.ts
+npx tsx --test src/backupData.test.ts src/backupValidation.test.ts src/backupRestore.test.ts src/calendar.test.ts src/dates.test.ts src/exercises.test.ts src/exerciseStorage.test.ts src/fitnotesImport.test.ts src/plates.test.ts src/useExerciseOrderScroll.test.ts src/workoutDays.test.ts src/workoutState.test.ts src/features/workout/exerciseRecords.test.ts src/features/records/personalRecords.test.ts
 node --test scripts/offline.test.mjs
 ```
 
@@ -90,6 +90,22 @@ Each date has at most one workout. Existing same-day sessions are merged on load
 all sets and combining notes. Exercises with the same name (case-insensitive) share one entry. If
 any merged session is a draft, the whole day remains a draft until **Finish**. Moving a workout onto
 an occupied date is rejected; selecting a date in Workout opens that date's existing workout.
+
+## Calendar navigation
+
+All month calendars—History, workout date selection, History editing, and copying a workout—use
+vertical swipes instead of arrow buttons. **Swipe up** for the next month and **swipe down** for the
+previous one. Swipe within the calendar; scrolling outside it still moves the page normally.
+
+**Today** returns to the current month. History also selects today's day. In date pickers it only
+browses back to today: tap a day to apply a date, or **Cancel** to leave the workout date unchanged.
+The copy calendar still allows only eligible earlier completed workouts. Date pickers cannot browse
+beyond the current month or select future dates.
+
+Mouse wheels and trackpads also change months, once per gesture so momentum does not skip months.
+For keyboard navigation, focus the month heading and use **Page Up / Page Down**. The native month
+control supports screen-reader increment/decrement actions. All views share `src/MonthCalendar.tsx`;
+`src/calendar.ts` contains framework-free month/grid and gesture rules.
 
 ## Edit exercises
 

@@ -17,6 +17,7 @@ import { projectedOneRepMax } from '../../progress';
 import { newId, prettyDate, today, useStore } from '../../store';
 import { persistWorkoutOnWeb } from '../../workoutStorage';
 import { s } from '../../styles';
+import { MonthCalendar } from '../../MonthCalendar';
 import { fs } from './styles';
 import { C } from '../../theme';
 import type { ExerciseDefinition, ExerciseEntry, SetEntry, Workout } from '../../types';
@@ -62,14 +63,6 @@ function CopyWorkoutModal({
       setAddingExercise(false);
     }
   }, [visible, targetDate]);
-  const [year, monthNumber] = month.split('-').map(Number);
-  const first = new Date(year!, monthNumber! - 1, 1);
-  const leading = (first.getDay() + 6) % 7;
-  const count = new Date(year!, monthNumber!, 0).getDate();
-  const cells = Array.from({ length: Math.ceil((leading + count) / 7) * 7 }, (_, i) => {
-    const day = i - leading + 1;
-    return day > 0 && day <= count ? day : null;
-  });
   const byDate = new Map(eligible.map((workout) => [workout.date, workout]));
   const choose = (w: Workout) => {
     setSource(w);
@@ -84,10 +77,6 @@ function CopyWorkoutModal({
   const selectDate = (date: string) => {
     const workout = byDate.get(date);
     if (workout) choose(workout);
-  };
-  const move = (delta: number) => {
-    const next = new Date(year!, monthNumber! - 1 + delta, 1);
-    setMonth(`${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`);
   };
   const addSet = (ei: number) =>
     setPreview((es) =>
@@ -266,73 +255,19 @@ function CopyWorkoutModal({
             <Text style={s.helper}>
               Choose an earlier workout. Days with workouts are marked in blue.
             </Text>
-            <View style={s.calendar}>
-              <View style={s.calendarNav}>
-                <Pressable onPress={() => move(-1)} style={s.calendarArrow}>
-                  <Ionicons name="chevron-back" size={22} color={C.blue} />
-                </Pressable>
-                <Text style={s.calendarTitle}>
-                  {first.toLocaleDateString('en', { month: 'long', year: 'numeric' })}
-                </Text>
-                <Pressable onPress={() => move(1)} style={s.calendarArrow}>
-                  <Ionicons name="chevron-forward" size={22} color={C.blue} />
-                </Pressable>
-              </View>
-              <View style={s.calendarGrid}>
-                {['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map((day) => (
-                  <Text key={day} style={s.weekday}>
-                    {day}
-                  </Text>
-                ))}
-                {cells.map((day, index) => {
-                  const date = day ? `${month}-${String(day).padStart(2, '0')}` : '';
-                  const available = byDate.has(date);
-                  const categories = [
-                    ...new Set(byDate.get(date)?.exercises.map((e) => e.category) ?? []),
-                  ];
-                  return (
-                    <Pressable
-                      disabled={!day || !available}
-                      key={`${day}-${index}`}
-                      onPress={() => selectDate(date)}
-                      style={s.calendarCell}
-                    >
-                      {day && (
-                        <View style={[s.dayCircle, available && fs.copyDayAvailable]}>
-                          <Text
-                            style={[
-                              s.dayText,
-                              !available && { color: C.muted },
-                              available && { color: C.white },
-                            ]}
-                          >
-                            {day}
-                          </Text>
-                          {available && (
-                            <View style={s.workoutDots}>
-                              {categories.slice(0, 5).map((category) => (
-                                <View
-                                  key={category}
-                                  style={[
-                                    s.workoutDot,
-                                    {
-                                      backgroundColor: colorForCategory(
-                                        category,
-                                        data.customCategories,
-                                      ),
-                                    },
-                                  ]}
-                                />
-                              ))}
-                            </View>
-                          )}
-                        </View>
-                      )}
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
+            <MonthCalendar
+              month={month}
+              onMonthChange={setMonth}
+              onSelectDate={selectDate}
+              customCategories={data.customCategories}
+              getDay={(date) => ({
+                disabled: !byDate.has(date),
+                highlighted: byDate.has(date),
+                categories: [
+                  ...new Set(byDate.get(date)?.exercises.map((entry) => entry.category) ?? []),
+                ],
+              })}
+            />
             {!eligible.length && (
               <Empty
                 icon="calendar-outline"

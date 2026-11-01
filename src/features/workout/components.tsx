@@ -11,7 +11,8 @@ import {
   View,
 } from 'react-native';
 import { BUILT_IN_CATEGORIES, CATEGORY_COLORS, colorForCategory } from '../../categories';
-import { prettyDate, today, useStore } from '../../store';
+import { today, useStore } from '../../store';
+import { MonthCalendar } from '../../MonthCalendar';
 import { s } from '../../styles';
 import { C } from '../../theme';
 import type { ExerciseDefinition } from '../../types';
@@ -283,18 +284,7 @@ export function DatePickerModal({
   useEffect(() => {
     if (visible) setMonth(value.slice(0, 7));
   }, [visible, value]);
-  const [year, monthNumber] = month.split('-').map(Number);
-  const first = new Date(year!, monthNumber! - 1, 1);
-  const leading = (first.getDay() + 6) % 7;
-  const count = new Date(year!, monthNumber!, 0).getDate();
-  const cells = Array.from({ length: Math.ceil((leading + count) / 7) * 7 }, (_, i) => {
-    const day = i - leading + 1;
-    return day > 0 && day <= count ? day : null;
-  });
-  const move = (delta: number) => {
-    const next = new Date(year!, monthNumber! - 1 + delta, 1);
-    setMonth(`${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`);
-  };
+  const currentDate = today();
   return (
     <Modal
       visible={visible}
@@ -310,85 +300,23 @@ export function DatePickerModal({
           <Text style={s.modalTitle}>Training date</Text>
           <View style={{ width: 42 }} />
         </View>
-        <View style={s.content}>
-          <View style={s.calendar}>
-            <View style={s.calendarNav}>
-              <Pressable onPress={() => move(-1)} style={s.calendarArrow}>
-                <Ionicons name="chevron-back" size={22} color={C.blue} />
-              </Pressable>
-              <Text style={s.calendarTitle}>
-                {first.toLocaleDateString('en', { month: 'long', year: 'numeric' })}
-              </Text>
-              <Pressable
-                disabled={month >= today().slice(0, 7)}
-                onPress={() => move(1)}
-                style={s.calendarArrow}
-              >
-                <Ionicons
-                  name="chevron-forward"
-                  size={22}
-                  color={month >= today().slice(0, 7) ? C.line : C.blue}
-                />
-              </Pressable>
-            </View>
-            <View style={s.calendarGrid}>
-              {['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map((day) => (
-                <Text key={day} style={s.weekday}>
-                  {day}
-                </Text>
-              ))}
-              {cells.map((day, index) => {
-                const date = day ? `${month}-${String(day).padStart(2, '0')}` : '';
-                const disabled = !day || date > today();
-                const active = date === value;
-                const categories = categoriesByDate.get(date) ?? [];
-                return (
-                  <Pressable
-                    disabled={disabled}
-                    key={`${day}-${index}`}
-                    onPress={() => {
-                      onSelect(date);
-                      onClose();
-                    }}
-                    style={s.calendarCell}
-                  >
-                    {day && (
-                      <View style={[s.dayCircle, active && s.daySelected]}>
-                        <Text
-                          style={[
-                            s.dayText,
-                            disabled && { color: C.line },
-                            active && s.dayTextSelected,
-                          ]}
-                        >
-                          {day}
-                        </Text>
-                        {categories.length > 0 && (
-                          <View style={s.workoutDots}>
-                            {categories.slice(0, 5).map((category) => (
-                              <View
-                                key={category}
-                                style={[
-                                  s.workoutDot,
-                                  {
-                                    backgroundColor: colorForCategory(
-                                      category,
-                                      data.customCategories,
-                                    ),
-                                  },
-                                ]}
-                              />
-                            ))}
-                          </View>
-                        )}
-                      </View>
-                    )}
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-        </View>
+        <ScrollView contentContainerStyle={s.content}>
+          <MonthCalendar
+            month={month}
+            onMonthChange={setMonth}
+            selectedDate={value}
+            maxMonth={currentDate.slice(0, 7)}
+            customCategories={data.customCategories}
+            getDay={(date) => ({
+              disabled: date > today(),
+              categories: categoriesByDate.get(date),
+            })}
+            onSelectDate={(date) => {
+              onSelect(date);
+              onClose();
+            }}
+          />
+        </ScrollView>
       </SafeAreaView>
     </Modal>
   );

@@ -25,6 +25,5 @@ export const fs = StyleSheet.create({
   metricRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
   metric: { flex: 1, backgroundColor: C.panel, borderRadius: radius.md, padding: 15 },
   metricValue: { fontSize: 24, fontWeight: '900', color: C.text, marginBottom: 4 },
-  dayToday: { borderWidth: 1, borderColor: C.blue },
   noWorkout: { alignItems: 'center', gap: 4, paddingVertical: 30 },
 });

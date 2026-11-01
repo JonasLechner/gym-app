@@ -45,7 +45,6 @@ export const fs = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: C.line,
   },
-  copyDayAvailable: { backgroundColor: C.blueDim },
   moveButtons: {
     borderRadius: 9,
     borderWidth: 1,
