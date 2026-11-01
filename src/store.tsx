@@ -1,10 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { canonicalExercise, englishExerciseName } from './categories';
+import { englishExerciseName } from './categories';
+import { createInitialData, normalizeAppData } from './appData';
+import { exerciseFields, exerciseLookup, exerciseNameKey, type ExerciseChanges } from './exercises';
+import { writeEditedExercise } from './exerciseStorage';
 import { importFitNotesRows, parseFitNotesCsv, type ImportSummary } from './fitnotesImport';
-import type { AppData, ExerciseDefinition, ExerciseEntry, Workout } from './types';
+import type { AppData, ExerciseDefinition, Workout } from './types';
 import { newId as ids } from './ids';
-import { mergeWorkoutsByDate } from './workoutDays';
 import { writeRestoredBackup } from './backupRestore';
 import { DATA_STORAGE_KEY as KEY } from './workoutStorage';
 import {
@@ -14,85 +16,14 @@ import {
 
 export { persistWorkoutOnWeb } from './workoutStorage';
 export { today } from './dates';
-const EXERCISE_DEFAULTS_VERSION = 1;
-const DEFAULT_EXERCISES: [string, string][] = [
-  ['Barbell Squat', 'Legs'],
-  ['Behind Back Cable Lat Raise 2 Arms', 'Shoulders'],
-  ['Cable Crunch', 'Abs'],
-  ['Cable Curl', 'Biceps'],
-  ['Cable Curl Unilateral', 'Biceps'],
-  ['Cable Face Pull', 'Shoulders'],
-  ['Cable Fly', 'Chest'],
-  ['Cable Overhead Triceps Extension', 'Triceps'],
-  ['Deadlift', 'Back'],
-  ['Dumbbell Hammer Curl', 'Biceps'],
-  ['Dumbbell Preacher Curl', 'Biceps'],
-  ['Dumbell Preacher Hammer Curl', 'Biceps'],
-  ['EZ-Bar Preacher Curl', 'Biceps'],
-  ['Flat Barbell Bench Press', 'Chest'],
-  ['Flat Bench Pause Reps', 'Chest'],
-  ['Flat Dumbbell Bench Press', 'Chest'],
-  ['Hanging Leg Raise', 'Abs'],
-  ['High Row Unilat', 'Back'],
-  ['Hyper Extension', 'Back'],
-  ['Incline Barbell Bench Press', 'Chest'],
-  ['Incline Dumbbell Bench Press', 'Chest'],
-  ['Lat Pulldown', 'Back'],
-  ['Lat Pulldown Close Grip', 'Back'],
-  ['Lat Pulldown Machine', 'Back'],
-  ['Lateral Dumbbell Raise', 'Shoulders'],
-  ['Lateral Machine Raise', 'Shoulders'],
-  ['Leg Curl Machine', 'Legs'],
-  ['Leg Extension Machine', 'Legs'],
-  ['Leg Press', 'Legs'],
-  ['Low Row', 'Back'],
-  ['Lying Leg Curl Machine', 'Legs'],
-  ['Machine Dip', 'Triceps'],
-  ['Machine Squat', 'Legs'],
-  ['Preacher Hammer Curl', 'Biceps'],
-  ['Pull Up', 'Back'],
-  ['Pullover', 'Back'],
-  ['Pullover Machine', 'Back'],
-  ['Reverse Fly Unilateral', 'Shoulders'],
-  ['Reverse Lat Pulldown', 'Back'],
-  ['Romanian Deadlift', 'Legs'],
-  ['Rope Push Down', 'Triceps'],
-  ['Seated Cable Row', 'Back'],
-  ['Seated Cable Row Unilateral', 'Back'],
-  ['Seated Dumbbell Lateral Raise', 'Shoulders'],
-  ['Seated Dumbbell Press', 'Shoulders'],
-  ['Seated Dumbell Curl', 'Biceps'],
-  ['Seated Hammer Curl', 'Biceps'],
-  ['Seated Incline Dumbbell Curl', 'Biceps'],
-  ['Seated Machine Curl', 'Biceps'],
-  ['Seated Machine Fly', 'Chest'],
-  ['Seated Row Machine', 'Back'],
-  ['Seated Shoulder Press', 'Shoulders'],
-  ['Seated Smith Machine Press', 'Shoulders'],
-  ['Standing Calf Raise Machine', 'Calves'],
-  ['T-Bar Row', 'Back'],
-  ['Triceps Kickbacks', 'Triceps'],
-  ['Unilateral Triceps Extension', 'Triceps'],
-];
-const initial: AppData = {
-  workouts: [],
-  exercises: DEFAULT_EXERCISES.map(([name, category]) => ({ id: ids(), name, category })),
-  routines: [],
-  customCategories: [],
-  settings: {
-    restSeconds: 120,
-    timerEnabled: true,
-    backupAfterWorkout: true,
-    nextBackupSlot: 'A',
-    exerciseDefaultsVersion: EXERCISE_DEFAULTS_VERSION,
-  },
-};
+const initial = createInitialData(ids);
 export type Store = {
   data: AppData;
   ready: boolean;
   saveWorkout: (w: Workout, webSnapshot?: AppData) => void;
   deleteWorkout: (id: string) => void;
   addExercise: (name: string, category: string) => ExerciseDefinition;
+  updateExercise: (original: ExerciseDefinition, changes: ExerciseChanges) => Promise<void>;
   addCategory: (name: string, color: string) => void;
   deleteExercise: (id: string) => void;
   updateSettings: (patch: Partial<AppData['settings']>) => void;
@@ -106,50 +37,7 @@ export function workoutStoreState(data: AppData, workout: Workout, webSnapshot?:
   return mergeWorkoutStoreState(data, workout, webSnapshot, ids);
 }
 
-function normalize(raw: Partial<AppData>): AppData {
-  const workouts = mergeWorkoutsByDate(
-    (raw.workouts ?? []).map((w) => {
-      const merged = new Map<string, ExerciseEntry>();
-      w.exercises.forEach((e) => {
-        const fixed = canonicalExercise(e.name, e.category);
-        const key = fixed.name.toLowerCase();
-        const found = merged.get(key);
-        if (found) found.sets.push(...e.sets);
-        else merged.set(key, { ...e, ...fixed, sets: [...e.sets] });
-      });
-      return { ...w, exercises: [...merged.values()] };
-    }),
-    ids,
-  );
-  const definitions = new Map<string, ExerciseDefinition>();
-  if ((raw.settings?.exerciseDefaultsVersion ?? 0) < EXERCISE_DEFAULTS_VERSION)
-    DEFAULT_EXERCISES.forEach(([name, category]) =>
-      definitions.set(name.toLowerCase(), { id: ids(), name, category }),
-    );
-  (raw.exercises ?? []).forEach((e) => {
-    const fixed = canonicalExercise(e.name, e.category);
-    definitions.set(fixed.name.toLowerCase(), { ...e, ...fixed });
-  });
-  workouts.forEach((w) =>
-    w.exercises.forEach((e) => {
-      if (!definitions.has(e.name.toLowerCase()))
-        definitions.set(e.name.toLowerCase(), { id: ids(), name: e.name, category: e.category });
-    }),
-  );
-  return {
-    ...initial,
-    ...raw,
-    workouts,
-    exercises: [...definitions.values()].sort((a, b) => a.name.localeCompare(b.name)),
-    routines: raw.routines ?? [],
-    customCategories: raw.customCategories ?? [],
-    settings: {
-      ...initial.settings,
-      ...raw.settings,
-      exerciseDefaultsVersion: EXERCISE_DEFAULTS_VERSION,
-    },
-  };
-}
+const normalize = (raw: Partial<AppData>): AppData => normalizeAppData(raw, ids);
 
 export function StoreProvider({ children }: React.PropsWithChildren) {
   const [data, setData] = useState(initial);
@@ -175,13 +63,24 @@ export function StoreProvider({ children }: React.PropsWithChildren) {
       deleteWorkout: (id) =>
         setData((d) => ({ ...d, workouts: d.workouts.filter((w) => w.id !== id) })),
       addExercise: (name, category) => {
-        const fixed = canonicalExercise(englishExerciseName(name), category);
+        const lookup = exerciseLookup(data.exercises);
+        const direct = lookup.get(exerciseNameKey(name));
+        if (direct) return direct;
+        const translated = englishExerciseName(name);
+        const fixed = exerciseFields(translated, category, lookup);
+        const existing =
+          lookup.get(exerciseNameKey(translated)) ?? lookup.get(exerciseNameKey(fixed.name));
+        if (existing) return existing;
         const e = { id: ids(), ...fixed };
         setData((d) => ({
           ...d,
           exercises: [...d.exercises, e].sort((a, b) => a.name.localeCompare(b.name)),
         }));
         return e;
+      },
+      updateExercise: async (original, changes) => {
+        const next = await writeEditedExercise(data, original, changes, AsyncStorage);
+        setData(next);
       },
       addCategory: (name, color) =>
         setData((d) =>

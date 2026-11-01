@@ -20,7 +20,13 @@ export type Workout = {
   draft?: boolean; // Visible in History, excluded from completed statistics until Finish.
 };
 
-export type ExerciseDefinition = { id: string; name: string; category: string };
+export type ExerciseDefinition = {
+  id: string;
+  name: string;
+  category: string;
+  customized?: boolean; // Explicit edits override legacy name/category corrections.
+  aliases?: string[]; // Former names reserved for this same exercise's identity.
+};
 export type CustomCategory = { id: string; name: string; color: string };
 export type Routine = { id: string; name: string; exerciseIds: string[] };
 export type Settings = {

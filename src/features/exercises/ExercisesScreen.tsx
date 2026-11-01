@@ -10,6 +10,7 @@ import { confirmAction, Empty, Header } from '../../ui';
 import { ExercisePicker } from '../workout/components';
 import type { ExerciseDefinition } from '../../types';
 import { ExerciseHistoryScreen } from './ExerciseHistoryScreen';
+import { EditExerciseModal } from './EditExerciseModal';
 
 export function ExercisesScreen() {
   const { data, deleteExercise } = useStore();
@@ -17,6 +18,7 @@ export function ExercisesScreen() {
   const [picker, setPicker] = useState(false);
   const [category, setCategory] = useState('All');
   const [selectedExercise, setSelectedExercise] = useState<ExerciseDefinition | null>(null);
+  const [editingExercise, setEditingExercise] = useState<ExerciseDefinition | null>(null);
   const categories = [...new Set(data.exercises.map((e) => e.category))].sort();
   const activeCategory = category === 'All' || categories.includes(category) ? category : 'All';
   const list = data.exercises.filter(
@@ -119,8 +121,16 @@ export function ExercisesScreen() {
               </Pressable>
               <Pressable
                 accessibilityRole="button"
+                accessibilityLabel={`Edit ${item.name}`}
+                style={fs.exerciseAction}
+                onPress={() => setEditingExercise(item)}
+              >
+                <Ionicons name="create-outline" size={21} color={C.blue} />
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
                 accessibilityLabel={`Delete ${item.name}`}
-                hitSlop={8}
+                style={fs.exerciseAction}
                 onPress={() =>
                   confirmAction('Delete exercise?', item.name, () => deleteExercise(item.id))
                 }
@@ -132,6 +142,18 @@ export function ExercisesScreen() {
         />
       </View>
       <ExercisePicker visible={picker} onClose={() => setPicker(false)} onPick={() => {}} />
+      {editingExercise && (
+        <EditExerciseModal
+          exercise={editingExercise}
+          onClose={() => setEditingExercise(null)}
+          onSaved={(changes) => {
+            if (!`${changes.name}${changes.category}`.toLowerCase().includes(query.toLowerCase()))
+              setQuery('');
+            if (category !== 'All' && category !== changes.category) setCategory(changes.category);
+            setEditingExercise(null);
+          }}
+        />
+      )}
     </View>
   );
 }

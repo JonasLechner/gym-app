@@ -1,5 +1,11 @@
 import Papa from 'papaparse';
-import { canonicalExercise, englishExerciseName } from './categories';
+import { englishExerciseName } from './categories';
+import {
+  exerciseFields,
+  exerciseLookup,
+  exerciseNameKey,
+  reconcileWorkoutExercises,
+} from './exercises';
 import type { AppData } from './types';
 import { mergeWorkoutsByDate } from './workoutDays';
 
@@ -41,7 +47,11 @@ export function importFitNotesRows(
 ): { data: AppData; summary: ImportSummary } {
   validateWeightUnits(rows);
   const summary: ImportSummary = { workouts: 0, sets: 0, duplicates: 0 };
-  const workouts = mergeWorkoutsByDate(current.workouts, newId);
+  const lookup = exerciseLookup(current.exercises);
+  const workouts = mergeWorkoutsByDate(
+    current.workouts.map((workout) => reconcileWorkoutExercises(workout, lookup)),
+    newId,
+  );
   // Same-day imports share the existing session, retaining draft status until Finish.
   const byDate = new Map(workouts.map((workout) => [workout.date, workout]));
   const existingCount = new Map<string, number>();
@@ -58,9 +68,12 @@ export function importFitNotesRows(
   rows.forEach((row) => {
     if (!row.Date || !row.Exercise) return;
     const date = row.Date.trim();
-    const fixed = canonicalExercise(
-      englishExerciseName(row.Exercise),
+    const fixed = exerciseFields(
+      lookup.get(exerciseNameKey(row.Exercise))?.customized
+        ? row.Exercise
+        : englishExerciseName(row.Exercise),
       row.Category?.trim() || 'Uncategorised',
+      lookup,
     );
     const weight = weightInKilograms(row);
     const reps = Number(row.Reps) || 0;

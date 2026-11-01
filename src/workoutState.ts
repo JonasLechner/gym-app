@@ -1,4 +1,5 @@
 import type { AppData, Workout } from './types';
+import { exerciseLookup, exerciseNameKey, reconcileWorkoutExercises } from './exercises';
 import { workoutDateError } from './workoutDays';
 
 export function workoutSaveError(workout: Workout, workouts: Workout[] = []): string | null {
@@ -15,15 +16,16 @@ export function assertWorkoutCanBeSaved(workout: Workout, workouts: Workout[] = 
 /** Merge one workout without replacing unrelated data or mutating the input. */
 export function withSavedWorkout(data: AppData, workout: Workout, newId: () => string): AppData {
   assertWorkoutCanBeSaved(workout, data.workouts);
+  workout = reconcileWorkoutExercises(workout, exerciseLookup(data.exercises));
   const workouts = [...data.workouts.filter((saved) => saved.id !== workout.id), workout].sort(
     (a, b) => b.date.localeCompare(a.date),
   );
   const definitions = new Map(
-    data.exercises.map((exercise) => [exercise.name.toLowerCase(), exercise]),
+    data.exercises.map((exercise) => [exerciseNameKey(exercise.name), exercise]),
   );
   workout.exercises.forEach((exercise) => {
-    if (!definitions.has(exercise.name.toLowerCase()))
-      definitions.set(exercise.name.toLowerCase(), {
+    if (!definitions.has(exerciseNameKey(exercise.name)))
+      definitions.set(exerciseNameKey(exercise.name), {
         id: newId(),
         name: exercise.name,
         category: exercise.category,

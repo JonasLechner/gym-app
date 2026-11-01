@@ -1,4 +1,5 @@
 import type { AppData, Workout } from './types';
+import { exerciseNameKey } from './exercises';
 
 function fail(path: string, message: string): never {
   throw new Error(`Invalid backup: ${path} ${message}`);
@@ -115,11 +116,22 @@ export function validateBackup(input: unknown): AppData {
 
   const exercises = array(root.exercises, 'exercises').map((value, index) => {
     const path = `exercises[${index}]`;
-    const item = object(value, path, ['id', 'name', 'category']);
+    const item = object(value, path, ['id', 'name', 'category', 'customized', 'aliases']);
+    const customized =
+      item.customized === undefined ? undefined : boolean(item.customized, `${path}.customized`);
+    const aliases =
+      item.aliases === undefined
+        ? undefined
+        : array(item.aliases, `${path}.aliases`).map((alias, index) =>
+            text(alias, `${path}.aliases[${index}]`),
+          );
+    if (aliases?.length && !customized) fail(`${path}.aliases`, 'requires customized to be true.');
     return {
       id: text(item.id, `${path}.id`),
       name: text(item.name, `${path}.name`),
       category: text(item.category, `${path}.category`),
+      ...(customized === undefined ? {} : { customized }),
+      ...(aliases === undefined ? {} : { aliases }),
     };
   });
   unique(
@@ -129,6 +141,12 @@ export function validateBackup(input: unknown): AppData {
   unique(
     exercises.map((entry) => entry.name.trim().toLowerCase()),
     'exercise definition names',
+  );
+  unique(
+    exercises.flatMap((exercise) =>
+      [exercise.name, ...(exercise.aliases ?? [])].map(exerciseNameKey),
+    ),
+    'exercise definition names and aliases',
   );
 
   const routines = array(root.routines === undefined ? [] : root.routines, 'routines').map(

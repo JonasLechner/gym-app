@@ -3,7 +3,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Dimensions, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colorForCategory } from '../../categories';
-import { CORE_LIFTS } from '../../coreLifts';
+import { coreLiftsForExercises } from '../../coreLifts';
+import { exerciseLookup, exerciseNameKey } from '../../exercises';
 import { localDateKey } from '../../dates';
 import {
   bestSetsByRepRange,
@@ -332,8 +333,11 @@ function RangeSelector({
 export function ProgressScreen() {
   const { data } = useStore();
   const completedWorkouts = useMemo(() => data.workouts.filter((w) => !w.draft), [data.workouts]);
-  const defaults: string[] = CORE_LIFTS.map((lift) => lift.exerciseName);
-  const [selectedExercise, setSelectedExercise] = useState(defaults[0]!);
+  const coreLifts = useMemo(() => coreLiftsForExercises(data.exercises), [data.exercises]);
+  const defaults = coreLifts.map((lift) => lift.exerciseName);
+  const [selection, setSelectedExercise] = useState(defaults[0]!);
+  const lookup = useMemo(() => exerciseLookup(data.exercises), [data.exercises]);
+  const selectedExercise = lookup.get(exerciseNameKey(selection))?.name ?? selection;
   const [query, setQuery] = useState('');
   const [mode, setMode] = useState<'weight' | 'oneRM'>('weight');
   const [ringRange, setRingRange] = useState<'30d' | '90d' | 'all'>('90d');
@@ -379,7 +383,7 @@ export function ProgressScreen() {
       <Header title="Progress" />
       <Text style={s.label}>CORE LIFTS</Text>
       <View style={fs.coreLiftRow}>
-        {defaults.map((name) => (
+        {coreLifts.map(({ id, label, exerciseName: name }) => (
           <Pressable
             key={name}
             onPress={() => {
@@ -389,7 +393,7 @@ export function ProgressScreen() {
             style={[fs.coreLift, name === selectedExercise && fs.coreLiftActive]}
           >
             <Text style={[fs.coreLiftText, name === selectedExercise && { color: C.white }]}>
-              {name === 'Flat Barbell Bench Press' ? 'Bench Press' : name.replace('Barbell ', '')}
+              {id === 'bench' ? 'Bench Press' : label}
             </Text>
           </Pressable>
         ))}

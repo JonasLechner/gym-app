@@ -56,7 +56,10 @@ Scan the QR code with Expo Go, or press `w` for the web version. Create a produc
 
 ## Workout persistence boundaries
 
-- `src/store.tsx` owns React state, loading/normalization, and store actions.
+- `src/store.tsx` owns React state, loading, and store actions; `src/appData.ts` owns framework-free
+  defaults and load/restore normalization.
+- `src/exercises.ts` owns exercise edits and former-name lookup. `src/exerciseStorage.ts` applies an
+  edit to the latest saved data, rejects detected concurrent changes, and awaits the write.
 - `src/workoutState.ts` owns framework-free workout merging and adoption of saved web snapshots. ID
   generation is injected so tests can be deterministic.
 - `src/workoutStorage.ts` owns synchronous browser reads/writes and the storage key shared with
@@ -75,7 +78,7 @@ persistence exports for compatibility; new browser-persistence callers should im
 Run behavior and offline-cache tests without React Native:
 
 ```bash
-npx tsx --test src/backupValidation.test.ts src/backupRestore.test.ts src/dates.test.ts src/fitnotesImport.test.ts src/plates.test.ts src/useExerciseOrderScroll.test.ts src/workoutDays.test.ts src/workoutState.test.ts src/features/workout/exerciseRecords.test.ts src/features/records/personalRecords.test.ts
+npx tsx --test src/backupValidation.test.ts src/backupRestore.test.ts src/dates.test.ts src/exercises.test.ts src/exerciseStorage.test.ts src/fitnotesImport.test.ts src/plates.test.ts src/useExerciseOrderScroll.test.ts src/workoutDays.test.ts src/workoutState.test.ts src/features/workout/exerciseRecords.test.ts src/features/records/personalRecords.test.ts
 node --test scripts/offline.test.mjs
 ```
 
@@ -85,6 +88,22 @@ Each date has at most one workout. Existing same-day sessions are merged on load
 all sets and combining notes. Exercises with the same name (case-insensitive) share one entry. If
 any merged session is a draft, the whole day remains a draft until **Finish**. Moving a workout onto
 an occupied date is rejected; selecting a date in Workout opens that date's existing workout.
+
+## Edit exercises
+
+Tap the blue pencil beside an exercise in **Exercises** to change its name or muscle group, then
+**Save changes**. Changes update its completed workouts and drafts without changing sets, comments,
+notes, dates, or routine references. **Cancel** discards the form changes.
+
+Renames keep the exercise's history, Progress charts, and core-lift records together, including the
+SBD total. Former names stay attached to the same exercise so CSV reimports remain duplicate-aware
+and old workout autosaves cannot recreate a renamed exercise. Names belonging to another exercise
+(including its former names) are rejected rather than silently merging exercises. Adding an exercise
+under an existing or former name reuses that exercise.
+
+Edits survive reloads and JSON export/restore, including explicit overrides of legacy muscle-group
+corrections. Save failures leave the editor open. Close other LiftNotes windows before saving an
+exercise edit; the concurrent-change checks are not a cross-window transaction.
 
 ## Exercise order
 

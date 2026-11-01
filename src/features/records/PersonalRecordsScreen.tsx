@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
-import { CORE_LIFTS, type CoreLiftId } from '../../coreLifts';
+import { coreLiftsForExercises, type CoreLiftId } from '../../coreLifts';
 import { prettyDate, useStore } from '../../store';
 import { s } from '../../styles';
 import { C } from '../../theme';
@@ -17,8 +17,11 @@ export function PersonalRecordsScreen({ onBack }: { onBack: () => void }) {
   const [view, setView] = useState<'reps' | 'timeline'>('reps');
   const lifts = useMemo(
     () =>
-      CORE_LIFTS.map((lift) => ({ ...lift, ...personalRecords(data.workouts, lift.exerciseName) })),
-    [data.workouts],
+      coreLiftsForExercises(data.exercises).map((lift) => ({
+        ...lift,
+        ...personalRecords(data.workouts, lift.exerciseName),
+      })),
+    [data.workouts, data.exercises],
   );
   const total = bigThreeTotal(lifts);
   const selected = lifts.find((lift) => lift.id === selectedId)!;

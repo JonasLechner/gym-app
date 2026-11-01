@@ -44,6 +44,13 @@ test('valid backups round-trip without changing values or mutating the source', 
   assert.deepEqual(backupSummary(parsed), { workouts: 1, days: 1, sets: 1 });
 });
 
+test('customized exercises and former names round-trip without losing edit metadata', () => {
+  const source = valid();
+  source.exercises[0]!.customized = true;
+  source.exercises[0]!.aliases = ['Previous bench name'];
+  assert.deepEqual(validateBackup(source), source);
+});
+
 test('known older backups receive only explicit legacy defaults', () => {
   const source: any = valid();
   delete source.routines;
@@ -81,6 +88,75 @@ test('same-day legacy sessions remain available for the lossless day migration',
 });
 
 const mutations: [string, (data: any) => void][] = [
+  [
+    'customized not boolean',
+    (data) => {
+      data.exercises[0].customized = 'yes';
+    },
+  ],
+  [
+    'aliases not an array',
+    (data) => {
+      data.exercises[0].customized = true;
+      data.exercises[0].aliases = 'Old bench';
+    },
+  ],
+  [
+    'blank former name',
+    (data) => {
+      data.exercises[0].customized = true;
+      data.exercises[0].aliases = [' '];
+    },
+  ],
+  [
+    'non-string former name',
+    (data) => {
+      data.exercises[0].customized = true;
+      data.exercises[0].aliases = [123];
+    },
+  ],
+  [
+    'duplicate former names',
+    (data) => {
+      data.exercises[0].customized = true;
+      data.exercises[0].aliases = ['Old bench', ' old BENCH '];
+    },
+  ],
+  [
+    'former name duplicates current name',
+    (data) => {
+      data.exercises[0].customized = true;
+      data.exercises[0].aliases = ['bench'];
+    },
+  ],
+  [
+    'former names without explicit customization',
+    (data) => {
+      data.exercises[0].aliases = ['Old bench'];
+    },
+  ],
+  [
+    'former name overlaps another definition',
+    (data) => {
+      data.exercises[0].customized = true;
+      data.exercises[0].aliases = ['Squat'];
+      data.exercises.push({ id: 'squat', name: 'Squat', category: 'Legs' });
+    },
+  ],
+  [
+    'ambiguous former names across definitions',
+    (data) => {
+      data.exercises[0].customized = true;
+      data.exercises[0].aliases = ['Old name'];
+      data.exercises.push({
+        id: 'squat',
+        name: 'Squat',
+        category: 'Legs',
+        customized: true,
+        aliases: [' old NAME '],
+      });
+    },
+  ],
   [
     'missing workouts',
     (data) => {
