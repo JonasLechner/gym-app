@@ -95,7 +95,6 @@ const fixture = (): AppData => ({
     restSeconds: 120,
     timerEnabled: true,
     backupAfterWorkout: true,
-    nextBackupSlot: 'A',
     exerciseDefaultsVersion: 1,
   },
 });

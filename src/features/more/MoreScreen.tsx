@@ -291,7 +291,7 @@ export function MoreScreen() {
             <View style={{ flex: 1, paddingRight: 12 }}>
               <Text style={s.rowTitle}>Backup after each workout</Text>
               <Text style={s.rowSub}>
-                Alternates between backup A and B, preserving the latest two copies
+                Exports LiftNotes-backup.json. Replace it in Files when asked.
               </Text>
             </View>
             <Switch

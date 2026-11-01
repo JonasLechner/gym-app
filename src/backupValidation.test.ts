@@ -27,7 +27,6 @@ const valid = (): AppData => ({
     restSeconds: 120,
     timerEnabled: true,
     backupAfterWorkout: true,
-    nextBackupSlot: 'A',
     exerciseDefaultsVersion: 1,
     lastBackupAt: '2026-01-01T10:00:00.000Z',
   },
@@ -55,17 +54,26 @@ test('known older backups receive only explicit legacy defaults', () => {
   const source: any = valid();
   delete source.routines;
   delete source.customCategories;
-  delete source.settings.nextBackupSlot;
   delete source.settings.exerciseDefaultsVersion;
   delete source.workouts[0].draft;
   delete source.workouts[0].note;
   const parsed = validateBackup(source);
   assert.deepEqual(parsed.routines, []);
   assert.deepEqual(parsed.customCategories, []);
-  assert.equal(parsed.settings.nextBackupSlot, 'A');
+  assert.equal('nextBackupSlot' in parsed.settings, false);
   assert.equal(parsed.settings.exerciseDefaultsVersion, 0);
   assert.equal('draft' in parsed.workouts[0]!, false);
   assert.equal('note' in parsed.workouts[0]!, false);
+});
+
+test('legacy A/B backups remain restorable without retaining their rotation setting', () => {
+  for (const slot of ['A', 'B']) {
+    const source = valid();
+    const legacy = { ...source, settings: { ...source.settings, nextBackupSlot: slot } };
+    const before = structuredClone(legacy);
+    assert.deepEqual(validateBackup(legacy), source);
+    assert.deepEqual(legacy, before);
+  }
 });
 
 test('empty databases and empty drafts are valid, but empty completed sessions are not', () => {

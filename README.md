@@ -20,10 +20,11 @@ windows are closed before activation, so an open workout keeps using its origina
 downloading an update online, close all LiftNotes windows/tabs and reopen to use it.
 
 App data stays in Safari storage on that iPhone. By default, finishing a workout also exports a
-backup, alternating between `LiftNotes-backup-A.json` and `LiftNotes-backup-B.json`. Always save
-both in the same Files folder and choose **Replace** when iOS asks. This keeps the newest two backup
-generations outside Safari. Clearing Safari website data or deleting the home-screen app may remove
-its working data, which can then be restored from either backup.
+backup named `LiftNotes-backup.json`. **More → Export backup** uses the same filename. Save it in
+the same Files folder and choose **Replace** when iOS asks; the app no longer alternates A/B files.
+The browser or Files may add a duplicate suffix instead, so check which file you saved. Clearing
+Safari website data or deleting the home-screen app may remove its working data. Keep a current
+backup outside Safari. Older A/B files remain supported for restoration.
 
 ## Safely restore a JSON backup
 
@@ -35,7 +36,7 @@ Unrelated or malformed JSON is rejected without replacing local data.
    the data currently on this device.
 2. Tap **Export current data first**. Save the uniquely named
    `LiftNotes-before-restore-<timestamp>.json` in Files, separately from the edited import and
-   rotating A/B backups. A download starting does not prove the file has been saved.
+   regular backup. A download starting does not prove the file has been saved.
 3. Check **I saved the separate safety backup in Files**, then tap **Restore this backup** and
    confirm the replacement. Keep the safety copy until you have checked your restored history.
 
@@ -65,7 +66,8 @@ Scan the QR code with Expo Go, or press `w` for the web version. Create a produc
 - `src/workoutStorage.ts` owns synchronous browser reads/writes and the storage key shared with
   AsyncStorage. It merges a workout into the latest stored state; parse and storage failures
   propagate rather than falling back to stale data.
-- `src/workoutPersistence.ts` coordinates completed-workout saving and rotating backups. Draft
+- `src/workoutPersistence.ts` coordinates completed-workout saving and automatic backups;
+  `src/backupData.ts` prepares the export payload and defines the shared backup filename. Draft
   autosaves do not go through backup coordination.
 - `src/backupValidation.ts` validates imported JSON without React or storage dependencies.
 - `src/backupRestore.ts` owns safety-snapshot reads and guarded, awaited replacement writes;
@@ -78,7 +80,7 @@ persistence exports for compatibility; new browser-persistence callers should im
 Run behavior and offline-cache tests without React Native:
 
 ```bash
-npx tsx --test src/backupValidation.test.ts src/backupRestore.test.ts src/dates.test.ts src/exercises.test.ts src/exerciseStorage.test.ts src/fitnotesImport.test.ts src/plates.test.ts src/useExerciseOrderScroll.test.ts src/workoutDays.test.ts src/workoutState.test.ts src/features/workout/exerciseRecords.test.ts src/features/records/personalRecords.test.ts
+npx tsx --test src/backupData.test.ts src/backupValidation.test.ts src/backupRestore.test.ts src/dates.test.ts src/exercises.test.ts src/exerciseStorage.test.ts src/fitnotesImport.test.ts src/plates.test.ts src/useExerciseOrderScroll.test.ts src/workoutDays.test.ts src/workoutState.test.ts src/features/workout/exerciseRecords.test.ts src/features/records/personalRecords.test.ts
 node --test scripts/offline.test.mjs
 ```
 

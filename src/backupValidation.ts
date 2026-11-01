@@ -200,8 +200,13 @@ export function validateBackup(input: unknown): AppData {
     'lastBackupAt',
     'exerciseDefaultsVersion',
   ]);
-  const slot = settings.nextBackupSlot === undefined ? 'A' : settings.nextBackupSlot;
-  if (slot !== 'A' && slot !== 'B') fail('settings.nextBackupSlot', 'must be A or B.');
+  // Accept the recognized legacy field, but do not carry rotation into restored data.
+  if (
+    settings.nextBackupSlot !== undefined &&
+    settings.nextBackupSlot !== 'A' &&
+    settings.nextBackupSlot !== 'B'
+  )
+    fail('settings.nextBackupSlot', 'must be A or B.');
   const lastBackupAt = optionalText(settings.lastBackupAt, 'settings.lastBackupAt');
   if (lastBackupAt !== undefined && !Number.isFinite(Date.parse(lastBackupAt)))
     fail('settings.lastBackupAt', 'must be a valid timestamp.');
@@ -214,7 +219,6 @@ export function validateBackup(input: unknown): AppData {
       restSeconds: number(settings.restSeconds, 'settings.restSeconds', 1, true),
       timerEnabled: boolean(settings.timerEnabled, 'settings.timerEnabled'),
       backupAfterWorkout: boolean(settings.backupAfterWorkout, 'settings.backupAfterWorkout'),
-      nextBackupSlot: slot,
       exerciseDefaultsVersion:
         settings.exerciseDefaultsVersion === undefined
           ? 0

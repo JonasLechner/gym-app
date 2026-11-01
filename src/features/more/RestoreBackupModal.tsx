@@ -139,8 +139,8 @@ export function RestoreBackupModal({ backup, onClose }: { backup: AppData; onClo
             <View style={s.card}>
               <Text style={fs.restoreFilename}>{copy.filename}</Text>
               <Text style={s.rowSub}>
-                Save this separate file in Files. It will not replace your edited import or rotating
-                A/B backups.
+                Save this separate file in Files. It will not replace your edited import or regular
+                backup.
               </Text>
             </View>
           )}

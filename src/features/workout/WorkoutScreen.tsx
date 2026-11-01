@@ -20,7 +20,7 @@ import { s } from '../../styles';
 import { fs } from './styles';
 import { C } from '../../theme';
 import type { ExerciseDefinition, ExerciseEntry, SetEntry, Workout } from '../../types';
-import { Button, confirmAction, Empty, fmt, Header, WeightInput } from '../../ui';
+import { Button, confirmAction, Empty, fmt, Header, showAlert, WeightInput } from '../../ui';
 import { useWorkoutPersistence } from '../../workoutPersistence';
 import { useExerciseOrderScroll } from '../../useExerciseOrderScroll';
 import { DatePickerModal, ExerciseMoveButtons, ExercisePicker } from './components';
@@ -647,11 +647,11 @@ export function WorkoutScreen({ onSaved }: { onSaved: () => void }) {
     const snapshot =
       Platform.OS === 'web' ? persistWorkoutOnWeb(dataRef.current, workout) : undefined;
     const result = await persistWorkout(workout, snapshot);
-    if (result.backupError) Alert.alert('Workout saved, backup failed', String(result.backupError));
-    else if (result.backupSlot)
+    if (result.backupError) showAlert('Workout saved, backup failed', String(result.backupError));
+    else if (result.backupFilename && Platform.OS !== 'web')
       Alert.alert(
         'Workout saved',
-        `Save LiftNotes-backup-${result.backupSlot}.json in the same Files folder. ` +
+        `Save ${result.backupFilename} in the same Files folder. ` +
           'Replace the existing file when asked.',
       );
     entriesRef.current = [];

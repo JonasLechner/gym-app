@@ -22,7 +22,7 @@ import { s } from '../../styles';
 import { fs } from './styles';
 import { C } from '../../theme';
 import type { ExerciseDefinition, SetEntry, Workout } from '../../types';
-import { Button, confirmAction, fmt, Header, WeightInput } from '../../ui';
+import { Button, confirmAction, fmt, Header, showAlert, WeightInput } from '../../ui';
 import { useWorkoutPersistence } from '../../workoutPersistence';
 import { useExerciseOrderScroll } from '../../useExerciseOrderScroll';
 import { workoutSaveError } from '../../workoutState';
@@ -147,8 +147,7 @@ function HistoryEditModal({ workout, onClose }: { workout: Workout | null; onClo
     if (next.draft) saveWorkout(next);
     else {
       const result = await persistWorkout(next);
-      if (result.backupError)
-        Alert.alert('Workout saved, backup failed', String(result.backupError));
+      if (result.backupError) showAlert('Workout saved, backup failed', String(result.backupError));
     }
     onClose();
   };

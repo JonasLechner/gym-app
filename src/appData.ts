@@ -67,7 +67,6 @@ const DEFAULT_SETTINGS: AppData['settings'] = {
   restSeconds: 120,
   timerEnabled: true,
   backupAfterWorkout: true,
-  nextBackupSlot: 'A',
   exerciseDefaultsVersion: EXERCISE_DEFAULTS_VERSION,
 };
 
@@ -123,16 +122,19 @@ export function normalizeAppData(raw: Partial<AppData>, newId: () => string): Ap
         });
     }
   }
+  const settings = {
+    ...DEFAULT_SETTINGS,
+    ...raw.settings,
+    exerciseDefaultsVersion: EXERCISE_DEFAULTS_VERSION,
+  };
+  // Older installations still contain the retired rotation setting.
+  delete (settings as AppData['settings'] & { nextBackupSlot?: unknown }).nextBackupSlot;
   return {
     ...raw,
     workouts,
     exercises: [...definitions.values()].sort((a, b) => a.name.localeCompare(b.name)),
     routines: raw.routines ?? [],
     customCategories: raw.customCategories ?? [],
-    settings: {
-      ...DEFAULT_SETTINGS,
-      ...raw.settings,
-      exerciseDefaultsVersion: EXERCISE_DEFAULTS_VERSION,
-    },
+    settings,
   };
 }

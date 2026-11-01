@@ -33,7 +33,6 @@ export type Settings = {
   restSeconds: number;
   timerEnabled: boolean;
   backupAfterWorkout: boolean;
-  nextBackupSlot: 'A' | 'B';
   lastBackupAt?: string;
   exerciseDefaultsVersion: number;
 };
