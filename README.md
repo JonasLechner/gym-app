@@ -75,7 +75,7 @@ persistence exports for compatibility; new browser-persistence callers should im
 Run behavior and offline-cache tests without React Native:
 
 ```bash
-npx tsx --test src/backupValidation.test.ts src/backupRestore.test.ts src/dates.test.ts src/fitnotesImport.test.ts src/plates.test.ts src/workoutDays.test.ts src/workoutState.test.ts src/features/workout/exerciseRecords.test.ts src/features/records/personalRecords.test.ts
+npx tsx --test src/backupValidation.test.ts src/backupRestore.test.ts src/dates.test.ts src/fitnotesImport.test.ts src/plates.test.ts src/useExerciseOrderScroll.test.ts src/workoutDays.test.ts src/workoutState.test.ts src/features/workout/exerciseRecords.test.ts src/features/records/personalRecords.test.ts
 node --test scripts/offline.test.mjs
 ```
 
@@ -85,6 +85,13 @@ Each date has at most one workout. Existing same-day sessions are merged on load
 all sets and combining notes. Exercises with the same name (case-insensitive) share one entry. If
 any merged session is a draft, the whole day remains a draft until **Finish**. Moving a workout onto
 an occupied date is rejected; selecting a date in Workout opens that date's existing workout.
+
+## Exercise order
+
+Use the up/down arrows to move an exercise. Workout, copy preview, History, and the History editor
+scroll to the moved exercise after its new position is laid out, keeping its header visible.
+Reordering in the History editor still takes effect only when you save; copy preview changes do not
+alter the original workout.
 
 ## Personal records
 

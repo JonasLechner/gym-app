@@ -22,6 +22,7 @@ import { C } from '../../theme';
 import type { ExerciseDefinition, ExerciseEntry, SetEntry, Workout } from '../../types';
 import { Button, confirmAction, Empty, fmt, Header, WeightInput } from '../../ui';
 import { useWorkoutPersistence } from '../../workoutPersistence';
+import { useExerciseOrderScroll } from '../../useExerciseOrderScroll';
 import { DatePickerModal, ExerciseMoveButtons, ExercisePicker } from './components';
 import { ExerciseHistoryScreen } from '../exercises/ExerciseHistoryScreen';
 import { exerciseSetRecords } from './exerciseRecords';
@@ -50,6 +51,7 @@ function CopyWorkoutModal({
   const [month, setMonth] = useState(latest.slice(0, 7));
   const [source, setSource] = useState<Workout | null>(null);
   const [preview, setPreview] = useState<ExerciseEntry[]>([]);
+  const previewScroll = useExerciseOrderScroll(preview);
   const [addingExercise, setAddingExercise] = useState(false);
   useEffect(() => {
     if (visible) {
@@ -101,8 +103,11 @@ function CopyWorkoutModal({
           : e,
       ),
     );
-  const movePreview = (id: string, direction: -1 | 1) =>
+  const movePreview = (id: string, direction: -1 | 1) => {
+    if (moveExercise(preview, id, direction) === preview) return;
+    previewScroll.scrollAfterMove(id);
     setPreview((items) => moveExercise(items, id, direction));
+  };
   const title = addingExercise
     ? 'Add exercise'
     : source
@@ -137,6 +142,7 @@ function CopyWorkoutModal({
         </View>
         {addingExercise ? (
           <ScrollView
+            ref={previewScroll.scrollRef}
             style={s.flex}
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={fs.list}
@@ -172,7 +178,7 @@ function CopyWorkoutModal({
               ))}
           </ScrollView>
         ) : source ? (
-          <ScrollView contentContainerStyle={s.content}>
+          <ScrollView ref={previewScroll.scrollRef} contentContainerStyle={s.content}>
             <View style={fs.copySummary}>
               <Text style={s.overline}>SOURCE WORKOUT</Text>
               <Text style={s.bigDate}>{prettyDate(source.date)}</Text>
@@ -181,7 +187,12 @@ function CopyWorkoutModal({
               </Text>
             </View>
             {preview.map((e, ei) => (
-              <View key={e.id} style={s.card}>
+              <View
+                key={e.id}
+                ref={previewScroll.exerciseRef(e.id)}
+                collapsable={false}
+                style={s.card}
+              >
                 <View style={s.cardHead}>
                   <ExerciseMoveButtons
                     name={e.name}
@@ -251,7 +262,7 @@ function CopyWorkoutModal({
             />
           </ScrollView>
         ) : (
-          <ScrollView contentContainerStyle={s.content}>
+          <ScrollView ref={previewScroll.scrollRef} contentContainerStyle={s.content}>
             <Text style={s.helper}>
               Choose an earlier workout. Days with workouts are marked in blue.
             </Text>
@@ -352,6 +363,7 @@ export function WorkoutScreen({ onSaved }: { onSaved: () => void }) {
       [],
   );
   const entriesRef = useRef(entries);
+  const workoutScroll = useExerciseOrderScroll(entries);
   const [picker, setPicker] = useState(false);
   const [copyPicker, setCopyPicker] = useState(false);
   const [historyExercise, setHistoryExercise] = useState<ExerciseDefinition | null>(null);
@@ -529,7 +541,11 @@ export function WorkoutScreen({ onSaved }: { onSaved: () => void }) {
         );
     });
   const moveEntry = (id: string, direction: -1 | 1) =>
-    changeEntries((items) => moveExercise(items, id, direction));
+    changeEntries((items) => {
+      const next = moveExercise(items, id, direction);
+      if (next !== items) workoutScroll.scrollAfterMove(id);
+      return next;
+    });
   const selectTrainingDate = (nextDate: string) => {
     flushDraft();
     if (nextDate === dateRef.current) return;
@@ -646,7 +662,11 @@ export function WorkoutScreen({ onSaved }: { onSaved: () => void }) {
   };
   return (
     <View style={s.flex}>
-      <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        ref={workoutScroll.scrollRef}
+        contentContainerStyle={s.content}
+        keyboardShouldPersistTaps="handled"
+      >
         <Header
           title="Workout"
           action={
@@ -702,7 +722,12 @@ export function WorkoutScreen({ onSaved }: { onSaved: () => void }) {
             ? data.workouts.find((w) => w.exercises.includes(prev))?.date
             : undefined;
           return (
-            <View key={e.id} style={s.card}>
+            <View
+              key={e.id}
+              ref={workoutScroll.exerciseRef(e.id)}
+              collapsable={false}
+              style={s.card}
+            >
               <View style={s.cardHead}>
                 <ExerciseMoveButtons
                   name={e.name}

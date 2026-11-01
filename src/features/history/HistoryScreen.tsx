@@ -24,6 +24,7 @@ import { C } from '../../theme';
 import type { ExerciseDefinition, SetEntry, Workout } from '../../types';
 import { Button, confirmAction, fmt, Header, WeightInput } from '../../ui';
 import { useWorkoutPersistence } from '../../workoutPersistence';
+import { useExerciseOrderScroll } from '../../useExerciseOrderScroll';
 import { workoutSaveError } from '../../workoutState';
 import { workoutDateError } from '../../workoutDays';
 import { DatePickerModal, ExerciseMoveButtons, ExercisePicker } from '../workout/components';
@@ -33,6 +34,7 @@ function HistoryEditModal({ workout, onClose }: { workout: Workout | null; onClo
   const { data, saveWorkout } = useStore();
   const persistWorkout = useWorkoutPersistence();
   const [draft, setDraft] = useState<Workout | null>(null);
+  const draftScroll = useExerciseOrderScroll(draft?.exercises);
   const [exercisePicker, setExercisePicker] = useState(false);
   const [datePicker, setDatePicker] = useState(false);
   useEffect(() => {
@@ -96,12 +98,15 @@ function HistoryEditModal({ workout, onClose }: { workout: Workout | null; onClo
           : w,
       ),
     );
-  const moveDraftExercise = (id: string, direction: -1 | 1) =>
+  const moveDraftExercise = (id: string, direction: -1 | 1) => {
+    if (moveExercise(draft.exercises, id, direction) === draft.exercises) return;
+    draftScroll.scrollAfterMove(id);
     setDraft((w) => {
       if (!w) return w;
       const exercises = moveExercise(w.exercises, id, direction);
       return exercises === w.exercises ? w : { ...w, exercises };
     });
+  };
   const addExercise = (definition: ExerciseDefinition) =>
     setDraft((w) => {
       if (!w || w.exercises.some((e) => e.name === definition.name)) return w;
@@ -159,7 +164,11 @@ function HistoryEditModal({ workout, onClose }: { workout: Workout | null; onClo
             <Text style={s.link}>Save</Text>
           </Pressable>
         </View>
-        <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          ref={draftScroll.scrollRef}
+          contentContainerStyle={s.content}
+          keyboardShouldPersistTaps="handled"
+        >
           <Pressable onPress={() => setDatePicker(true)} style={s.dateStrip}>
             <Text style={s.overline}>TRAINING DATE</Text>
             <Text style={s.bigDate}>{prettyDate(draft.date)}</Text>
@@ -175,7 +184,7 @@ function HistoryEditModal({ workout, onClose }: { workout: Workout | null; onClo
             placeholderTextColor={C.muted}
           />
           {draft.exercises.map((e, ei) => (
-            <View key={e.id} style={s.card}>
+            <View key={e.id} ref={draftScroll.exerciseRef(e.id)} collapsable={false} style={s.card}>
               <View style={s.cardHead}>
                 <ExerciseMoveButtons
                   name={e.name}
@@ -265,6 +274,7 @@ function HistoryEditModal({ workout, onClose }: { workout: Workout | null; onClo
 
 export function HistoryScreen() {
   const { data, deleteWorkout, saveWorkout } = useStore();
+  const historyScroll = useExerciseOrderScroll(data.workouts);
   const initialDate = data.workouts[0]?.date ?? today();
   const [month, setMonth] = useState(initialDate.slice(0, 7));
   const [selected, setSelected] = useState(initialDate);
@@ -306,7 +316,7 @@ export function HistoryScreen() {
   const monthLabel = firstDay.toLocaleDateString('en', { month: 'long', year: 'numeric' });
   return (
     <>
-      <ScrollView contentContainerStyle={s.content}>
+      <ScrollView ref={historyScroll.scrollRef} contentContainerStyle={s.content}>
         <Header title="History" />
         <View style={fs.metricRow}>
           <Metric value={String(workoutCount)} label="WORKOUTS" />
@@ -448,7 +458,12 @@ export function HistoryScreen() {
                 {open === w.id && (
                   <View style={fs.detail}>
                     {w.exercises.map((e, index) => (
-                      <View key={e.id} style={fs.historyExercise}>
+                      <View
+                        key={e.id}
+                        ref={historyScroll.exerciseRef(`${w.id}:${e.id}`)}
+                        collapsable={false}
+                        style={fs.historyExercise}
+                      >
                         <View style={fs.historyExerciseRow}>
                           <ExerciseMoveButtons
                             name={e.name}
@@ -456,7 +471,10 @@ export function HistoryScreen() {
                             count={w.exercises.length}
                             onMove={(direction) => {
                               const exercises = moveExercise(w.exercises, e.id, direction);
-                              if (exercises !== w.exercises) saveWorkout({ ...w, exercises });
+                              if (exercises !== w.exercises) {
+                                historyScroll.scrollAfterMove(`${w.id}:${e.id}`);
+                                saveWorkout({ ...w, exercises });
+                              }
                             }}
                           />
                           <View style={{ flex: 1 }}>
