@@ -16,7 +16,7 @@ import type { CustomCategory } from './types';
 
 type CalendarDay = { disabled?: boolean; highlighted?: boolean; categories?: string[] };
 const touchStyle: ViewStyle & { touchAction?: string } =
-  Platform.OS === 'web' ? { touchAction: 'pan-x pinch-zoom' } : {};
+  Platform.OS === 'web' ? { touchAction: 'pan-y pinch-zoom' } : {};
 
 /** Shared, arrow-free month browser; only a day tap calls onSelectDate. */
 export function MonthCalendar({
@@ -109,15 +109,15 @@ export function MonthCalendar({
     const node = surface.current as unknown as HTMLElement | null;
     if (!node) return;
     const onWheel = (event: WheelEvent) => {
-      if (
-        event.ctrlKey ||
-        event.shiftKey ||
-        Math.abs(event.deltaY) <= Math.abs(event.deltaX) * 1.25
-      )
-        return;
+      if (event.ctrlKey) return;
+      // Shift+wheel provides horizontal navigation for a regular mouse.
+      const shifted = event.shiftKey && event.deltaX === 0;
+      const dx = shifted ? event.deltaY : event.deltaX;
+      const dy = shifted ? 0 : event.deltaY;
+      if (Math.abs(dx) <= Math.abs(dy) * 1.25) return;
       event.preventDefault();
-      const scale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? node.clientHeight : 1;
-      const direction = wheel.observe(event.deltaX * scale, event.deltaY * scale, Date.now());
+      const scale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? node.clientWidth : 1;
+      const direction = wheel.observe(dx * scale, dy * scale, Date.now());
       if (direction) moveMonth(direction);
     };
     node.addEventListener('wheel', onWheel, { passive: false });
@@ -138,9 +138,9 @@ export function MonthCalendar({
             )
               return;
             const direction =
-              event.key === 'PageDown' || event.key === 'ArrowUp'
+              event.key === 'PageDown' || event.key === 'ArrowRight'
                 ? 1
-                : event.key === 'PageUp' || event.key === 'ArrowDown'
+                : event.key === 'PageUp' || event.key === 'ArrowLeft'
                   ? -1
                   : null;
             if (direction) {
@@ -166,13 +166,13 @@ export function MonthCalendar({
           accessible
           accessibilityRole="adjustable"
           accessibilityLabel="Calendar month"
-          accessibilityHint="Swipe up for the next month or down for the previous month."
+          accessibilityHint="Swipe left for the next month or right for the previous month."
           accessibilityValue={{ min: 0, max: maximum, now: calendarMonthIndex(month), text: label }}
           aria-valuemin={0}
           aria-valuemax={maximum}
           aria-valuenow={calendarMonthIndex(month)}
           aria-valuetext={label}
-          aria-orientation="vertical"
+          aria-orientation="horizontal"
           accessibilityActions={[
             { name: 'increment', label: 'Next month' },
             { name: 'decrement', label: 'Previous month' },
@@ -204,7 +204,7 @@ export function MonthCalendar({
           <Text style={s.calendarTodayText}>Today</Text>
         </Pressable>
       </View>
-      <Text style={s.calendarHint}>Swipe up or down to change month</Text>
+      <Text style={s.calendarHint}>Swipe left or right to change month</Text>
       <View style={s.calendarGrid}>
         {['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map((day) => (
           <Text key={day} style={s.weekday}>

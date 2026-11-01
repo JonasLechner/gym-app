@@ -37,25 +37,25 @@ export function isCalendarPan(dx: number, dy: number, touches: number): boolean 
     touches === 1 &&
     Number.isFinite(dx) &&
     Number.isFinite(dy) &&
-    Math.abs(dy) >= 10 &&
-    Math.abs(dy) > Math.abs(dx) * AXIS_RATIO
+    Math.abs(dx) >= 10 &&
+    Math.abs(dx) > Math.abs(dy) * AXIS_RATIO
   );
 }
 
-/** Dragging the calendar up reveals the next month; dragging down reveals the previous one. */
+/** Dragging left reveals the next month; dragging right reveals the previous one. */
 export function calendarSwipeDirection(dx: number, dy: number): -1 | 1 | null {
-  if (!isCalendarPan(dx, dy, 1) || Math.abs(dy) < SWIPE_DISTANCE) return null;
-  return dy < 0 ? 1 : -1;
+  if (!isCalendarPan(dx, dy, 1) || Math.abs(dx) < SWIPE_DISTANCE) return null;
+  return dx < 0 ? 1 : -1;
 }
 
-/** One month per wheel/trackpad gesture, ignoring momentum until the gesture settles. */
+/** One month per horizontal wheel/trackpad gesture, leaving vertical page scrolling alone. */
 export function createCalendarWheelTracker() {
   let lastAt = -Infinity;
   let total = 0;
   let moved = false;
   return {
     observe(dx: number, dy: number, at: number): -1 | 1 | null {
-      if (!Number.isFinite(dx) || !Number.isFinite(dy) || Math.abs(dy) <= Math.abs(dx) * AXIS_RATIO)
+      if (!Number.isFinite(dx) || !Number.isFinite(dy) || Math.abs(dx) <= Math.abs(dy) * AXIS_RATIO)
         return null;
       if (at - lastAt > 180) {
         total = 0;
@@ -63,7 +63,7 @@ export function createCalendarWheelTracker() {
       }
       lastAt = at;
       if (moved) return null;
-      total += dy;
+      total += dx;
       if (Math.abs(total) < SWIPE_DISTANCE) return null;
       moved = true;
       return total > 0 ? 1 : -1;

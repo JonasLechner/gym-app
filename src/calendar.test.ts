@@ -58,76 +58,76 @@ test('invalid month keys fail instead of producing invalid calendar dates', () =
   }
 });
 
-test('a vertical upward swipe advances one month and a downward swipe goes back', () => {
-  assert.equal(calendarSwipeDirection(0, -100), 1);
-  assert.equal(calendarSwipeDirection(3, 100), -1);
-  assert.equal(calendarSwipeDirection(0, -48), 1);
-  assert.equal(calendarSwipeDirection(0, 48), -1);
+test('a left swipe advances one month and a right swipe goes back', () => {
+  assert.equal(calendarSwipeDirection(-100, 0), 1);
+  assert.equal(calendarSwipeDirection(100, 3), -1);
+  assert.equal(calendarSwipeDirection(-48, 0), 1);
+  assert.equal(calendarSwipeDirection(48, 0), -1);
 });
 
-test('taps, short drags, horizontal/diagonal swipes and invalid coordinates do not change months', () => {
+test('taps, short drags, vertical/diagonal swipes and invalid coordinates do not change months', () => {
   for (const [dx, dy] of [
     [0, 0],
-    [3, 9],
-    [0, 47],
-    [0, -47],
-    [100, 5],
+    [9, 3],
+    [47, 0],
+    [-47, 0],
+    [5, 100],
     [100, 100],
-    [NaN, 100],
-    [0, Infinity],
+    [100, NaN],
+    [Infinity, 0],
   ])
     assert.equal(calendarSwipeDirection(dx!, dy!), null);
-  assert.equal(isCalendarPan(0, 9, 1), false);
-  assert.equal(isCalendarPan(0, 12, 1), true);
-  assert.equal(calendarSwipeDirection(0, 12), null);
+  assert.equal(isCalendarPan(9, 0, 1), false);
+  assert.equal(isCalendarPan(12, 0, 1), true);
+  assert.equal(calendarSwipeDirection(12, 0), null);
 });
 
-test('multi-touch and horizontal movement never claim a calendar pan', () => {
-  assert.equal(isCalendarPan(0, 100, 2), false);
-  assert.equal(isCalendarPan(0, 100, 0), false);
-  assert.equal(isCalendarPan(100, 10, 1), false);
-  assert.equal(isCalendarPan(70, 100, 1), true);
-  assert.equal(isCalendarPan(85, 100, 1), false);
+test('multi-touch and vertical movement never claim a calendar pan', () => {
+  assert.equal(isCalendarPan(100, 0, 2), false);
+  assert.equal(isCalendarPan(100, 0, 0), false);
+  assert.equal(isCalendarPan(10, 100, 1), false);
+  assert.equal(isCalendarPan(100, 70, 1), true);
+  assert.equal(isCalendarPan(100, 85, 1), false);
 });
 
-test('wheel momentum advances only once until the gesture has settled', () => {
+test('horizontal wheel momentum advances only once until the gesture has settled', () => {
   const wheel = createCalendarWheelTracker();
-  assert.equal(wheel.observe(0, 100, 0), 1);
-  for (const at of [30, 60, 90, 120]) assert.equal(wheel.observe(0, 100, at), null);
-  assert.equal(wheel.observe(0, -100, 350), -1);
-  assert.equal(wheel.observe(0, -100, 380), null);
+  assert.equal(wheel.observe(100, 0, 0), 1);
+  for (const at of [30, 60, 90, 120]) assert.equal(wheel.observe(100, 0, at), null);
+  assert.equal(wheel.observe(-100, 0, 350), -1);
+  assert.equal(wheel.observe(-100, 0, 380), null);
 });
 
-test('small trackpad deltas accumulate without triggering on incidental motion', () => {
+test('small horizontal trackpad deltas accumulate without triggering on vertical motion', () => {
   const wheel = createCalendarWheelTracker();
-  assert.equal(wheel.observe(0, 10, 0), null);
-  assert.equal(wheel.observe(0, 15, 20), null);
-  assert.equal(wheel.observe(0, 23, 40), 1);
-  assert.equal(wheel.observe(100, 5, 300), null);
-  assert.equal(wheel.observe(0, -47, 320), null);
-  assert.equal(wheel.observe(0, -1, 340), -1);
+  assert.equal(wheel.observe(10, 0, 0), null);
+  assert.equal(wheel.observe(15, 0, 20), null);
+  assert.equal(wheel.observe(23, 0, 40), 1);
+  assert.equal(wheel.observe(5, 100, 300), null);
+  assert.equal(wheel.observe(-47, 0, 320), null);
+  assert.equal(wheel.observe(-1, 0, 340), -1);
 });
 
-test('Today cancels lingering wheel motion, but a new gesture still works', () => {
+test('Today cancels lingering horizontal wheel motion, but a new gesture still works', () => {
   const wheel = createCalendarWheelTracker();
-  assert.equal(wheel.observe(0, 20, 0), null);
+  assert.equal(wheel.observe(20, 0, 0), null);
   wheel.cancel(10);
-  assert.equal(wheel.observe(0, 100, 30), null);
-  assert.equal(wheel.observe(0, 100, 60), null);
-  assert.equal(wheel.observe(0, 100, 300), 1);
+  assert.equal(wheel.observe(100, 0, 30), null);
+  assert.equal(wheel.observe(100, 0, 60), null);
+  assert.equal(wheel.observe(100, 0, 300), 1);
 });
 
-test('invalid or horizontal wheel deltas cannot change months', () => {
+test('invalid or vertical wheel deltas cannot change months', () => {
   const wheel = createCalendarWheelTracker();
   for (const [dx, dy] of [
-    [NaN, 100],
-    [0, Infinity],
-    [100, 10],
+    [100, NaN],
+    [Infinity, 0],
+    [10, 100],
     [100, 100],
     [0, 0],
   ])
     assert.equal(wheel.observe(dx!, dy!, 0), null);
-  assert.equal(wheel.observe(0, 100, 0), 1);
+  assert.equal(wheel.observe(100, 0, 0), 1);
 });
 
 test('calendar weekday alignment remains local and stable across time zones and DST changes', () => {
